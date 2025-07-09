@@ -6,6 +6,12 @@ from PIL import Image
 import math
 import random
 
+global music_started
+music_started = False
+knight_trail = []
+trail_length = 10
+trail_alphas = [80, 70, 60, 50, 40, 30, 20, 15, 10, 5]
+
 OUTLINE_COLOR = (39, 41, 63, 255)  # RGBA for outline
 
 def main():
@@ -200,6 +206,7 @@ def main():
         battle_box_width,
         battle_box_height
     )
+    original_battle_box_rect = battle_box_rect.copy()
 
     # Load knight idle sprite
     knight_idle_img = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_roaringknight_idle.png')).convert_alpha()
@@ -211,6 +218,9 @@ def main():
     heart_img_1 = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_heart', 'spr_heart_1.png')).convert_alpha()
     heart_img_1 = pygame.transform.smoothscale(heart_img_1, (heart_size, heart_size))
     heart_img = heart_img_0
+    knight_trail = []
+    trail_length = 10
+    trail_alphas = [80, 70, 60, 50, 40, 30, 20, 15, 10, 5]
     invincible_until = 0
     # Player position (center of battle box)
     player_x = battle_box_rect.left + battle_box_width // 2 - heart_size // 2
@@ -235,35 +245,439 @@ def main():
     ralsei_rect.left = susie_rect.left - 10
     ralsei_rect.centery = susie_rect.centery + 100
 
+    font = pygame.font.SysFont(None, 48)
+
+    player_lives = 999
+
     # Call the intro cutscene before the main loop
-    play_battle_intro(
+    player_x, player_y = play_battle_intro(
         screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
         kris_idle_frames, kris_rect, susie_idle_frames, susie_rect,
         ralsei_idle_frames, ralsei_rect, battle_box_rect, base_dir,
-        kris_target_size, susie_target_size, ralsei_target_size
+        kris_target_size, susie_target_size, ralsei_target_size,
+        kris_frame_idx, susie_frame_idx, ralsei_frame_idx,
+        battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+        fountain_anim_speed, fountain_frame_count,
+        kris_anim_speed, kris_frame_count,
+        susie_anim_speed, susie_frame_count,
+        ralsei_anim_speed, ralsei_frame_count,
+        fountain_anim_timer, kris_anim_timer, susie_anim_timer, ralsei_anim_timer
     )
 
-    pygame.mixer.music.load(os.path.join(base_dir, 'black_knife.ogg'))
-    pygame.mixer.music.play(-1)
-
-    knight_trail = []  # List of (image, rect) tuples
-    trail_length = 10
-    trail_alphas = [80, 70, 60, 50, 40, 30, 20, 15, 10, 5]  # More visible, longer trail
     knight_point_trail = []  # Trail for the pointing Knight
     
     # Start Attack 1
-    knight_point_img, knight_point_rect, knight_point_frames = Attack1(
+    knight_point_img, knight_point_rect, knight_point_frames, player_x, player_y, \
+    triangle_knight_img, triangle_knight_rect, triangle_start_time, \
+    knight_reverse_duration, knight_idle_img = PreAttack1(
         screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
-        kris_rect, battle_box_rect, knight_idle_img,
-        knight_trail, trail_length, trail_alphas, clock,
+        kris_rect, battle_box_rect, knight_idle_img, clock,
         battle_box_color, battle_box_border_color, battle_box_border,
-        heart_img, player_x, player_y, heart_size,
+        heart_img_0, player_x, player_y, heart_size,
         kris_idle_frames, kris_frame_idx, kris_rect,
         susie_idle_frames, susie_frame_idx, susie_rect,
-        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        player_speed=player_speed
     )
 
-    # Use a single attack_phase variable to control Knight state
+    # Start Attack 1 (call Attack1 with all required arguments)
+    Attack1(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+        knight_point_img, knight_point_rect, knight_point_frames,
+        clock, player_speed,
+        screen_height, base_dir, knight_point_trail,
+        fountain_anim_speed, fountain_frame_count,
+        kris_anim_speed, kris_frame_count,
+        susie_anim_speed, susie_frame_count,
+        ralsei_anim_speed, ralsei_frame_count,
+        fountain_anim_timer, kris_anim_timer, susie_anim_timer, ralsei_anim_timer,
+        invincible_until,
+        triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img
+    )
+
+    # --- 2 second idle break and battle box transition between attacks ---
+    invincible = False
+    show_knight_idle = True
+    knight_idle_left = battle_box_rect.right + 40
+    knight_idle_centery = kris_rect.centery + 20
+    battle_box_rect, player_x, player_y = PreAttack2(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, original_battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+        knight_idle_img, show_knight_idle, clock,
+        knight_idle_left, knight_idle_centery,
+        anim_duration=2000, player_speed=player_speed
+    )
+
+    pygame.quit()
+    sys.exit()
+
+def play_battle_intro(screen, bg_img, fountain_scaled_frames, fountain_frame_idx, kris_idle_frames, kris_rect, susie_idle_frames, susie_rect, ralsei_idle_frames, ralsei_rect, battle_box_rect, base_dir, kris_target_size, susie_target_size, ralsei_target_size, kris_frame_idx, susie_frame_idx, ralsei_frame_idx, battle_box_color, battle_box_border_color, battle_box_border, heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, fountain_anim_speed, fountain_frame_count, kris_anim_speed, kris_frame_count, susie_anim_speed, susie_frame_count, ralsei_anim_speed, ralsei_frame_count, fountain_anim_timer, kris_anim_timer, susie_anim_timer, ralsei_anim_timer):
+    import time
+    # Load intro animations
+    def load_anim(folder, numeric_sort=False):
+        files = [
+            os.path.join(folder, f) for f in os.listdir(folder)
+            if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+        ]
+        if numeric_sort:
+            files.sort(key=lambda x: int(''.join(filter(str.isdigit, os.path.basename(x))) or 0))
+        else:
+            files = sorted(files)
+        return [pygame.image.load(f).convert_alpha() for f in files]
+
+    kris_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_krisb_intro'))
+    susie_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_susieb_attack'))
+    ralsei_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_ralsei_battleintro'))
+    knight_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_roaringknight_sword_appear_new'), numeric_sort=True)
+    knight_idle_img = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_roaringknight_idle.png')).convert_alpha()
+
+    # Scale all intro frames to match idle frame sizes
+    def scale_all_to_target(frames, target_size):
+        return [pygame.transform.smoothscale(f, target_size) for f in frames]
+
+    # Kris
+    kris_intro_frames = scale_all_to_target(kris_intro_frames, kris_target_size)
+    kris_idle_frames = scale_all_to_target(kris_idle_frames, kris_target_size)
+    # Susie
+    susie_intro_frames = scale_all_to_target(susie_intro_frames, susie_target_size)
+    susie_idle_frames = scale_all_to_target(susie_idle_frames, susie_target_size)
+    # Ralsei
+    ralsei_intro_frames = scale_all_to_target(ralsei_intro_frames, ralsei_target_size)
+    ralsei_idle_frames = scale_all_to_target(ralsei_idle_frames, ralsei_target_size)
+    # Knight (4x idle size)
+    knight_idle_orig_size = (knight_idle_img.get_width(), knight_idle_img.get_height())
+    knight_target_size = (int(knight_idle_orig_size[0] * 3), int(knight_idle_orig_size[1] * 3))
+    knight_intro_frames = scale_all_to_target(knight_intro_frames, knight_target_size)
+    knight_idle_img = pygame.transform.smoothscale(knight_idle_img, knight_target_size)
+
+    # After scaling to target size, manually scale up intro frames to visually match idle sprites
+    kris_intro_frames = [pygame.transform.smoothscale(f, (int(f.get_width() * 1.5), int(f.get_height() * 1.5))) for f in kris_intro_frames]
+    susie_intro_frames = [pygame.transform.smoothscale(f, (int(f.get_width() * 1.5), int(f.get_height() * 1.5))) for f in susie_intro_frames]
+
+    # Animation lengths
+    knight_len = len(knight_intro_frames)
+    kris_len = len(kris_intro_frames)
+    susie_len = len(susie_intro_frames)
+    ralsei_len = len(ralsei_intro_frames)
+
+    knight_pause_frame = 7  # pause after frame 6 (index 6), on frame 7
+    knight_pause_duration = 6  # frames to pause (shorter pause)
+    knight_total_frames = knight_len + knight_pause_duration
+
+    # Other intros start at the pause
+    kris_start = knight_pause_frame
+    susie_start = knight_pause_frame
+    ralsei_start = knight_pause_frame
+    max_frames = max(knight_total_frames, kris_start + kris_len, susie_start + susie_len, ralsei_start + ralsei_len)
+
+    # Calculate Roaring Knight position (3x size, 100px to right of battle box)
+    knight_rect = knight_idle_img.get_rect()
+    knight_rect.centery = kris_rect.centery
+    knight_rect.left = battle_box_rect.right + 40
+    knight_idle_base_y = knight_rect.top
+
+    clock = pygame.time.Clock()
+    for i in range(max_frames):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        screen.blit(bg_img, (0, 0))
+        # Draw fountain
+        fountain_img = fountain_scaled_frames[fountain_frame_idx]
+        fountain_rect = fountain_img.get_rect()
+        fountain_rect.left = kris_rect.left + kris_rect.width + 100
+        fountain_rect.top = 0
+        screen.blit(fountain_img, fountain_rect)
+        # Kris
+        if i >= kris_start and (i - kris_start) < kris_len:
+            intro_img = kris_intro_frames[i - kris_start]
+            intro_rect = intro_img.get_rect()
+            intro_rect.center = kris_rect.center  # align centers
+            screen.blit(intro_img, intro_rect)
+        else:
+            screen.blit(kris_idle_frames[0], kris_rect)
+        # Susie
+        if i >= susie_start and (i - susie_start) < susie_len:
+            intro_img = susie_intro_frames[i - susie_start]
+            intro_rect = intro_img.get_rect()
+            intro_rect.center = susie_rect.center  # align centers
+            screen.blit(intro_img, intro_rect)
+        else:
+            screen.blit(susie_idle_frames[0], susie_rect)
+        # Ralsei
+        if i >= ralsei_start and (i - ralsei_start) < ralsei_len:
+            screen.blit(ralsei_intro_frames[i - ralsei_start], ralsei_rect)
+        else:
+            screen.blit(ralsei_idle_frames[0], ralsei_rect)
+        # Roaring Knight
+        if i < knight_pause_frame:
+            screen.blit(knight_intro_frames[i], knight_rect)
+        elif i < knight_pause_frame + knight_pause_duration:
+            screen.blit(knight_intro_frames[knight_pause_frame], knight_rect)
+        elif (i - knight_pause_duration) < knight_len:
+            screen.blit(knight_intro_frames[i - knight_pause_duration], knight_rect)
+        else:
+            # Idle, float up and down
+            float_offset = int(20 * math.sin(pygame.time.get_ticks() / 267))
+            idle_rect = knight_rect.copy()
+            idle_rect.top = knight_idle_base_y + float_offset
+            screen.blit(knight_idle_img, idle_rect)
+        pygame.display.flip()
+        clock.tick(16)  # 16 FPS for cutscene
+
+    # Draw the main scene after the intro
+    draw_main_scene(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False
+    )
+    pygame.display.flip()
+
+    # Idle animation loop before Attack1
+    idle_duration = 500  # milliseconds (3 seconds)
+    idle_start = pygame.time.get_ticks()
+    player_speed = 5  # Ensure player_speed is defined here
+    while pygame.time.get_ticks() - idle_start < idle_duration:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+        # Handle player movement (copied from main loop)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            player_x += player_speed
+        if keys[pygame.K_UP]:
+            player_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            player_y += player_speed
+        # Clamp player position to inside the battle box
+        playable_rect = battle_box_rect.inflate(-2 * battle_box_border, -2 * battle_box_border)
+        player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
+        player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
+        # Advance animation frames
+        fountain_anim_timer += 1
+        if fountain_anim_timer >= fountain_anim_speed:
+            fountain_frame_idx = (fountain_frame_idx + 1) % fountain_frame_count
+            fountain_anim_timer = 0
+        kris_anim_timer += 1
+        if kris_anim_timer >= kris_anim_speed:
+            kris_frame_idx = (kris_frame_idx + 1) % kris_frame_count
+            kris_anim_timer = 0
+        susie_anim_timer += 1
+        if susie_anim_timer >= susie_anim_speed:
+            susie_frame_idx = (susie_frame_idx + 1) % susie_frame_count
+            susie_anim_timer = 0
+        ralsei_anim_timer += 1
+        if ralsei_anim_timer >= ralsei_anim_speed:
+            ralsei_frame_idx = (ralsei_frame_idx + 1) % ralsei_frame_count
+            ralsei_anim_timer = 0
+        draw_main_scene(
+            screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False,
+            knight_idle_img, True, clock
+        )
+        pygame.display.flip()
+        clock.tick(60)
+
+
+    # Draw the main scene after the first attack to clear leftovers
+    draw_main_scene(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False,
+        knight_idle_img, True, clock
+    )
+    pygame.display.flip()
+    return player_x, player_y
+
+# Rename the current Attack1 to PreAttack1
+def PreAttack1(
+    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+    kris_rect, battle_box_rect, knight_idle_img, clock,
+    battle_box_color, battle_box_border_color, battle_box_border,
+    heart_img_0, player_x, player_y, heart_size,
+    kris_idle_frames, kris_frame_idx, kris_rect_in, susie_idle_frames, susie_frame_idx, susie_rect_in,
+    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect_in,
+    player_speed=5
+):
+    global knight_trail, trail_length, trail_alphas
+    # Input lockout for 200ms to prevent accidental movement from held keys
+    input_lockout_duration = 200  # ms
+    attack1_start_time = pygame.time.get_ticks()
+    movement_keys_released = False
+    # Load Knight point animation frames
+    knight_point_dir = os.path.join(os.path.dirname(__file__), 'sprites', 'spr_roaringknight_point_ol')
+    knight_point_files = sorted([
+        os.path.join(knight_point_dir, f) for f in os.listdir(knight_point_dir)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    ])
+    knight_point_frames = [pygame.image.load(f).convert_alpha() for f in knight_point_files]
+    # Scale to match idle size
+    knight_point_frames = [pygame.transform.smoothscale(f, knight_idle_img.get_size()) for f in knight_point_frames]
+
+    # Start and end positions
+    start_x = battle_box_rect.right + 40
+    start_y = kris_rect.centery + 20
+    end_x = battle_box_rect.right + 10  # closer to the box
+    end_y = battle_box_rect.centery
+    move_duration = 1000  # ms
+    anim_duration = 1000  # ms for 5 frames
+    start_time = pygame.time.get_ticks()
+    running = True
+    while running:
+        now = pygame.time.get_ticks()
+        t = min((now - start_time) / move_duration, 1.0)
+        # Interpolate position
+        knight_x = int(start_x + (end_x - start_x) * t)
+        knight_y = int(start_y + (end_y - start_y) * t)
+        # Animation frame
+        frame_idx = min(int((now - start_time) / (anim_duration / len(knight_point_frames))), len(knight_point_frames) - 1)
+        knight_img = knight_point_frames[frame_idx]
+        knight_rect = knight_img.get_rect()
+        knight_rect.left = knight_x
+        knight_rect.centery = knight_y
+        # Only allow player movement after input lockout and after all movement keys are released
+        keys = pygame.key.get_pressed()
+        movement_keys = [keys[pygame.K_LEFT], keys[pygame.K_RIGHT], keys[pygame.K_UP], keys[pygame.K_DOWN]]
+        if now - attack1_start_time > input_lockout_duration:
+            if not movement_keys_released:
+                if not any(movement_keys):
+                    movement_keys_released = True
+            else:
+                if keys[pygame.K_LEFT]:
+                    player_x -= player_speed
+                if keys[pygame.K_RIGHT]:
+                    player_x += player_speed
+                if keys[pygame.K_UP]:
+                    player_y -= player_speed
+                if keys[pygame.K_DOWN]:
+                    player_y += player_speed
+        # Clamp player position to inside the battle box
+        playable_rect = battle_box_rect.inflate(-2 * battle_box_border, -2 * battle_box_border)
+        player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
+        player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
+        # Trail logic
+        knight_trail.insert(0, (knight_img.copy(), knight_rect.copy()))
+        if len(knight_trail) > trail_length:
+            knight_trail.pop()
+        # Draw everything
+        screen.blit(bg_img, (0, 0))
+        # Draw battle box
+        pygame.draw.rect(screen, battle_box_color, battle_box_rect)
+        pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
+        # Draw player heart
+        screen.blit(heart_img_0, (player_x, player_y))
+        # Draw heroes
+        screen.blit(kris_idle_frames[kris_frame_idx], kris_rect_in)
+        screen.blit(susie_idle_frames[susie_frame_idx], susie_rect_in)
+        screen.blit(ralsei_idle_frames[ralsei_frame_idx], ralsei_rect_in)
+        # Draw trail
+        for i, (img, rect) in enumerate(reversed(knight_trail)):
+            img = img.copy()
+            img.set_alpha(trail_alphas[i])
+            rect = rect.copy()
+            rect.left += 40 + i * 10
+            screen.blit(img, rect)
+        # Draw Knight
+        screen.blit(knight_img, knight_rect)
+        pygame.display.flip()
+        clock.tick(60)
+        # End condition: when movement and animation are done
+        if t >= 1.0 and frame_idx == len(knight_point_frames) - 1:
+            running = False
+
+    # Hold the final pose for 0.5 seconds (500 ms)
+    hold_time = 500  # ms
+    hold_start = pygame.time.get_ticks()
+    while pygame.time.get_ticks() - hold_start < hold_time:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        # Handle player movement
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            player_x += player_speed
+        if keys[pygame.K_UP]:
+            player_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            player_y += player_speed
+        # Clamp player position to inside the battle box
+        playable_rect = battle_box_rect.inflate(-2 * battle_box_border, -2 * battle_box_border)
+        player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
+        player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
+        # Redraw the final frame and trail
+        screen.blit(bg_img, (0, 0))
+        pygame.draw.rect(screen, battle_box_color, battle_box_rect)
+        pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
+        screen.blit(heart_img_0, (player_x, player_y))
+        screen.blit(kris_idle_frames[kris_frame_idx], kris_rect_in)
+        screen.blit(susie_idle_frames[susie_frame_idx], susie_rect_in)
+        screen.blit(ralsei_idle_frames[ralsei_frame_idx], ralsei_rect_in)
+        for i, (img, rect) in enumerate(reversed(knight_trail)):
+            img = img.copy()
+            img.set_alpha(trail_alphas[i])
+            rect = rect.copy()
+            rect.left += 40 + i * 10
+            screen.blit(img, rect)
+        screen.blit(knight_point_frames[-1], knight_rect)
+        pygame.display.flip()
+        clock.tick(60)
+
+    # Define variables for return
+    triangle_knight_img = knight_point_frames[-1]
+    triangle_knight_rect = knight_rect
+    triangle_start_time = pygame.time.get_ticks()
+    knight_reverse_duration = 500  # ms, adjust as needed
+
+    return knight_point_frames[-1], knight_rect, knight_point_frames, player_x, player_y, triangle_knight_img, triangle_knight_rect, triangle_start_time, knight_reverse_duration, knight_idle_img
+
+# Move the triangle, star, and starchild attack logic from main() into a new function called Attack1
+def Attack1(
+    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+    kris_idle_frames, kris_frame_idx, kris_rect,
+    susie_idle_frames, susie_frame_idx, susie_rect,
+    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+    battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+    heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+    knight_point_img, knight_point_rect, knight_point_frames,
+    clock, player_speed,
+    screen_height, base_dir, knight_point_trail,
+    fountain_anim_speed, fountain_frame_count,
+    kris_anim_speed, kris_frame_count,
+    susie_anim_speed, susie_frame_count,
+    ralsei_anim_speed, ralsei_frame_count,
+    fountain_anim_timer, kris_anim_timer, susie_anim_timer, ralsei_anim_timer,
+    invincible_until,
+    triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img
+):
+    global knight_trail, trail_length, trail_alphas
+     # Use a single attack_phase variable to control Knight state
     attack_phase = 'triangle'  # 'triangle', 'reverse', 'idle'
     triangle_active = True
     triangle_start_time = pygame.time.get_ticks()
@@ -364,11 +778,9 @@ def main():
     starchilds_exploded = False
     starchilds_display_start = None
 
-    player_lives = 999
-    font = pygame.font.SysFont(None, 48)
-
     screen_rect = screen.get_rect()
 
+    running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -696,41 +1108,15 @@ def main():
         elif attack_phase == 'idle':
             knight_idle_allowed = True
             if not idle_redraw_once:
-                # Force a full redraw to cover any leftover artifacts
-                screen.blit(bg_img, (0, 0))
-                # Redraw all main elements (heroes, battle box, heart, etc.)
-                # Kris
-                kris_img = kris_idle_frames[kris_frame_idx]
-                kris_rect = kris_img.get_rect()
-                kris_rect.left = 350
-                kris_rect.centery = screen_height // 2 - 100
-                screen.blit(kris_img, kris_rect)
-                # Fountain
-                fountain_img = fountain_scaled_frames[fountain_frame_idx]
-                fountain_rect = fountain_img.get_rect()
-                fountain_rect.left = kris_rect.left + kris_rect.width + 100
-                fountain_rect.top = 0
-                screen.blit(fountain_img, fountain_rect)
-                # Susie
-                susie_img = susie_idle_frames[susie_frame_idx]
-                susie_rect = susie_img.get_rect()
-                susie_rect.left = kris_rect.left - 120
-                susie_rect.centery = kris_rect.centery + 100
-                screen.blit(susie_img, susie_rect)
-                # Ralsei
-                ralsei_img = ralsei_idle_frames[ralsei_frame_idx]
-                ralsei_rect = ralsei_img.get_rect()
-                ralsei_rect.left = susie_rect.left - 10
-                ralsei_rect.centery = susie_rect.centery + 100
-                screen.blit(ralsei_img, ralsei_rect)
-                # Battle box
-                pygame.draw.rect(screen, battle_box_color, battle_box_rect)
-                pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
-                # Player heart
-                screen.blit(heart_img_0, (player_x, player_y))
-                # Lives counter
-                lives_surf = font.render(f"LIVES: {player_lives}", True, (255, 255, 255))
-                screen.blit(lives_surf, (50, 50))
+                draw_main_scene(
+                    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+                    kris_idle_frames, kris_frame_idx, kris_rect,
+                    susie_idle_frames, susie_frame_idx, susie_rect,
+                    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+                    battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+                    heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False
+                )
+                pygame.display.flip()
                 idle_redraw_once = True
         if knight_idle_allowed:
             # Only draw the idle Knight and its trail if attack_phase == 'idle'
@@ -789,214 +1175,166 @@ def main():
 
         clock.tick(60)  # 60 FPS
 
-    pygame.quit()
-    sys.exit()
-
-def play_battle_intro(screen, bg_img, fountain_scaled_frames, fountain_frame_idx, kris_idle_frames, kris_rect, susie_idle_frames, susie_rect, ralsei_idle_frames, ralsei_rect, battle_box_rect, base_dir, kris_target_size, susie_target_size, ralsei_target_size):
-    import time
-    # Load intro animations
-    def load_anim(folder, numeric_sort=False):
-        files = [
-            os.path.join(folder, f) for f in os.listdir(folder)
-            if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-        ]
-        if numeric_sort:
-            files.sort(key=lambda x: int(''.join(filter(str.isdigit, os.path.basename(x))) or 0))
-        else:
-            files = sorted(files)
-        return [pygame.image.load(f).convert_alpha() for f in files]
-
-    kris_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_krisb_intro'))
-    susie_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_susieb_attack'))
-    ralsei_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_ralsei_battleintro'))
-    knight_intro_frames = load_anim(os.path.join(base_dir, 'sprites', 'spr_roaringknight_sword_appear_new'), numeric_sort=True)
-    knight_idle_img = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_roaringknight_idle.png')).convert_alpha()
-
-    # Scale all intro frames to match idle frame sizes
-    def scale_all_to_target(frames, target_size):
-        return [pygame.transform.smoothscale(f, target_size) for f in frames]
-
-    # Kris
-    kris_intro_frames = scale_all_to_target(kris_intro_frames, kris_target_size)
-    kris_idle_frames = scale_all_to_target(kris_idle_frames, kris_target_size)
-    # Susie
-    susie_intro_frames = scale_all_to_target(susie_intro_frames, susie_target_size)
-    susie_idle_frames = scale_all_to_target(susie_idle_frames, susie_target_size)
-    # Ralsei
-    ralsei_intro_frames = scale_all_to_target(ralsei_intro_frames, ralsei_target_size)
-    ralsei_idle_frames = scale_all_to_target(ralsei_idle_frames, ralsei_target_size)
-    # Knight (4x idle size)
-    knight_idle_orig_size = (knight_idle_img.get_width(), knight_idle_img.get_height())
-    knight_target_size = (int(knight_idle_orig_size[0] * 3), int(knight_idle_orig_size[1] * 3))
-    knight_intro_frames = scale_all_to_target(knight_intro_frames, knight_target_size)
-    knight_idle_img = pygame.transform.smoothscale(knight_idle_img, knight_target_size)
-
-    # After scaling to target size, manually scale up intro frames to visually match idle sprites
-    kris_intro_frames = [pygame.transform.smoothscale(f, (int(f.get_width() * 1.5), int(f.get_height() * 1.5))) for f in kris_intro_frames]
-    susie_intro_frames = [pygame.transform.smoothscale(f, (int(f.get_width() * 1.5), int(f.get_height() * 1.5))) for f in susie_intro_frames]
-
-    # Animation lengths
-    knight_len = len(knight_intro_frames)
-    kris_len = len(kris_intro_frames)
-    susie_len = len(susie_intro_frames)
-    ralsei_len = len(ralsei_intro_frames)
-
-    knight_pause_frame = 7  # pause after frame 6 (index 6), on frame 7
-    knight_pause_duration = 6  # frames to pause (shorter pause)
-    knight_total_frames = knight_len + knight_pause_duration
-
-    # Other intros start at the pause
-    kris_start = knight_pause_frame
-    susie_start = knight_pause_frame
-    ralsei_start = knight_pause_frame
-    max_frames = max(knight_total_frames, kris_start + kris_len, susie_start + susie_len, ralsei_start + ralsei_len)
-
-    # Calculate Roaring Knight position (3x size, 100px to right of battle box)
-    knight_rect = knight_idle_img.get_rect()
-    knight_rect.centery = kris_rect.centery
-    knight_rect.left = battle_box_rect.right + 40
-    knight_idle_base_y = knight_rect.top
-
-    clock = pygame.time.Clock()
-    for i in range(max_frames):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-        screen.blit(bg_img, (0, 0))
-        # Draw fountain
-        fountain_img = fountain_scaled_frames[fountain_frame_idx]
-        fountain_rect = fountain_img.get_rect()
-        fountain_rect.left = kris_rect.left + kris_rect.width + 100
-        fountain_rect.top = 0
-        screen.blit(fountain_img, fountain_rect)
-        # Kris
-        if i >= kris_start and (i - kris_start) < kris_len:
-            intro_img = kris_intro_frames[i - kris_start]
-            intro_rect = intro_img.get_rect()
-            intro_rect.center = kris_rect.center  # align centers
-            screen.blit(intro_img, intro_rect)
-        else:
-            screen.blit(kris_idle_frames[0], kris_rect)
-        # Susie
-        if i >= susie_start and (i - susie_start) < susie_len:
-            intro_img = susie_intro_frames[i - susie_start]
-            intro_rect = intro_img.get_rect()
-            intro_rect.center = susie_rect.center  # align centers
-            screen.blit(intro_img, intro_rect)
-        else:
-            screen.blit(susie_idle_frames[0], susie_rect)
-        # Ralsei
-        if i >= ralsei_start and (i - ralsei_start) < ralsei_len:
-            screen.blit(ralsei_intro_frames[i - ralsei_start], ralsei_rect)
-        else:
-            screen.blit(ralsei_idle_frames[0], ralsei_rect)
-        # Roaring Knight
-        if i < knight_pause_frame:
-            screen.blit(knight_intro_frames[i], knight_rect)
-        elif i < knight_pause_frame + knight_pause_duration:
-            screen.blit(knight_intro_frames[knight_pause_frame], knight_rect)
-        elif (i - knight_pause_duration) < knight_len:
-            screen.blit(knight_intro_frames[i - knight_pause_duration], knight_rect)
-        else:
-            # Idle, float up and down
-            float_offset = int(20 * math.sin(pygame.time.get_ticks() / 267))
-            idle_rect = knight_rect.copy()
-            idle_rect.top = knight_idle_base_y + float_offset
-            screen.blit(knight_idle_img, idle_rect)
-        pygame.display.flip()
-        clock.tick(16)  # 16 FPS for cutscene
-
-
-def Attack1(screen, bg_img, fountain_scaled_frames, fountain_frame_idx, kris_rect, battle_box_rect, knight_idle_img, knight_trail, trail_length, trail_alphas, clock, battle_box_color, battle_box_border_color, battle_box_border, heart_img, player_x, player_y, heart_size, kris_idle_frames, kris_frame_idx, kris_rect_in, susie_idle_frames, susie_frame_idx, susie_rect_in, ralsei_idle_frames, ralsei_frame_idx, ralsei_rect_in):
-    # Load Knight point animation frames
-    knight_point_dir = os.path.join(os.path.dirname(__file__), 'sprites', 'spr_roaringknight_point_ol')
-    knight_point_files = sorted([
-        os.path.join(knight_point_dir, f) for f in os.listdir(knight_point_dir)
-        if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-    ])
-    knight_point_frames = [pygame.image.load(f).convert_alpha() for f in knight_point_files]
-    # Scale to match idle size
-    knight_point_frames = [pygame.transform.smoothscale(f, knight_idle_img.get_size()) for f in knight_point_frames]
-
-    # Start and end positions
-    start_x = battle_box_rect.right + 40
-    start_y = kris_rect.centery + 20
-    end_x = battle_box_rect.right + 10  # closer to the box
-    end_y = battle_box_rect.centery
-    move_duration = 1000  # ms
-    anim_duration = 1000  # ms for 5 frames
-    start_time = pygame.time.get_ticks()
-    running = True
-    while running:
-        now = pygame.time.get_ticks()
-        t = min((now - start_time) / move_duration, 1.0)
-        # Interpolate position
-        knight_x = int(start_x + (end_x - start_x) * t)
-        knight_y = int(start_y + (end_y - start_y) * t)
-        # Animation frame
-        frame_idx = min(int((now - start_time) / (anim_duration / len(knight_point_frames))), len(knight_point_frames) - 1)
-        knight_img = knight_point_frames[frame_idx]
-        knight_rect = knight_img.get_rect()
-        knight_rect.left = knight_x
-        knight_rect.centery = knight_y
-        # Trail logic
-        knight_trail.insert(0, (knight_img.copy(), knight_rect.copy()))
-        if len(knight_trail) > trail_length:
-            knight_trail.pop()
-        # Draw everything
-        screen.blit(bg_img, (0, 0))
-        # Draw battle box
-        pygame.draw.rect(screen, battle_box_color, battle_box_rect)
-        pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
-        # Draw player heart
-        screen.blit(heart_img, (player_x, player_y))
-        # Draw heroes
-        screen.blit(kris_idle_frames[kris_frame_idx], kris_rect_in)
-        screen.blit(susie_idle_frames[susie_frame_idx], susie_rect_in)
-        screen.blit(ralsei_idle_frames[ralsei_frame_idx], ralsei_rect_in)
-        # Draw trail
-        for i, (img, rect) in enumerate(reversed(knight_trail)):
-            img = img.copy()
-            img.set_alpha(trail_alphas[i])
-            rect = rect.copy()
-            rect.left += 40 + i * 10
-            screen.blit(img, rect)
-        # Draw Knight
-        screen.blit(knight_img, knight_rect)
-        pygame.display.flip()
-        clock.tick(60)
-        # End condition: when movement and animation are done
-        if t >= 1.0 and frame_idx == len(knight_point_frames) - 1:
+        # If the attack phase is 'idle' and the idle redraw has happened, end the loop
+        if attack_phase == 'idle' and idle_redraw_once:
             running = False
 
-    # Hold the final pose for 0.5 seconds (500 ms)
-    hold_time = 500  # ms
-    hold_start = pygame.time.get_ticks()
-    while pygame.time.get_ticks() - hold_start < hold_time:
+def PreAttack2(
+    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+    kris_idle_frames, kris_frame_idx, kris_rect,
+    susie_idle_frames, susie_frame_idx, susie_rect,
+    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+    battle_box_rect, original_battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+    heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+    knight_idle_img, show_knight_idle, clock,
+    knight_idle_left, knight_idle_centery,
+    anim_duration=2000, player_speed=5
+):
+    """
+    Smoothly move and resize the battle box to its original center and make it a perfect square (width=height)
+    over anim_duration ms, while drawing the idle scene and allowing player movement.
+    Returns the updated battle box rect and player position.
+    """
+    start_time = pygame.time.get_ticks()
+    start_rect = battle_box_rect.copy()
+    end_center = original_battle_box_rect.center
+    target_size = (start_rect.height, start_rect.height)  # perfect square
+    running = True
+    # We'll keep the player moving as in idle
+    while running:
+        now = pygame.time.get_ticks()
+        t = min((now - start_time) / anim_duration, 1.0)
+        # Interpolate center
+        new_center_x = int(start_rect.centerx + (end_center[0] - start_rect.centerx) * t)
+        new_center_y = int(start_rect.centery + (end_center[1] - start_rect.centery) * t)
+        # Interpolate width
+        new_width = int(start_rect.width + (target_size[0] - start_rect.width) * t)
+        new_height = start_rect.height  # height stays the same
+        # Make it a perfect square
+        new_width = new_height
+        # Build new rect
+        new_rect = pygame.Rect(0, 0, new_width, new_height)
+        new_rect.center = (new_center_x, new_center_y)
+        # Handle player movement
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 sys.exit()
-        # Redraw the final frame and trail
-        screen.blit(bg_img, (0, 0))
-        pygame.draw.rect(screen, battle_box_color, battle_box_rect)
-        pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
-        screen.blit(heart_img, (player_x, player_y))
-        screen.blit(kris_idle_frames[kris_frame_idx], kris_rect_in)
-        screen.blit(susie_idle_frames[susie_frame_idx], susie_rect_in)
-        screen.blit(ralsei_idle_frames[ralsei_frame_idx], ralsei_rect_in)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            player_x += player_speed
+        if keys[pygame.K_UP]:
+            player_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            player_y += player_speed
+        # Clamp player position to inside the new battle box
+        playable_rect = new_rect.inflate(-2 * battle_box_border, -2 * battle_box_border)
+        player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
+        player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
+        # Draw the idle scene with the new battle box
+        draw_main_scene(
+            screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            new_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            knight_idle_left, knight_idle_centery
+        )
+        pygame.display.flip()
+        clock.tick(60)
+        if t >= 1.0:
+            running = False
+    return new_rect, player_x, player_y
+
+def draw_main_scene(
+    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+    kris_idle_frames, kris_frame_idx, kris_rect,
+    susie_idle_frames, susie_frame_idx, susie_rect,
+    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+    battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+    heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+    knight_idle_img=None, show_knight_idle=True, clock=None,
+    knight_idle_left=None, knight_idle_centery=None
+):  
+    if not hasattr(draw_main_scene, "music_started"):
+        pygame.mixer.music.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'black_knife.ogg'))
+        pygame.mixer.music.play(-1)
+        draw_main_scene.music_started = True
+    global knight_trail, trail_length, trail_alphas
+    # Draw background
+    screen.blit(bg_img, (0, 0))
+    # Draw Kris
+    kris_img = kris_idle_frames[kris_frame_idx]
+    kris_rect_draw = kris_img.get_rect()
+    kris_rect_draw.left = kris_rect.left
+    kris_rect_draw.centery = kris_rect.centery
+    screen.blit(kris_img, kris_rect_draw)
+    # Draw fountain
+    fountain_img = fountain_scaled_frames[fountain_frame_idx]
+    fountain_rect = fountain_img.get_rect()
+    fountain_rect.left = kris_rect_draw.left + kris_rect_draw.width + 100
+    fountain_rect.top = 0
+    screen.blit(fountain_img, fountain_rect)
+    # Draw Susie
+    susie_img = susie_idle_frames[susie_frame_idx]
+    susie_rect_draw = susie_img.get_rect()
+    susie_rect_draw.left = kris_rect_draw.left - 120
+    susie_rect_draw.centery = kris_rect_draw.centery + 100
+    screen.blit(susie_img, susie_rect_draw)
+    # Draw Ralsei
+    ralsei_img = ralsei_idle_frames[ralsei_frame_idx]
+    ralsei_rect_draw = ralsei_img.get_rect()
+    ralsei_rect_draw.left = susie_rect_draw.left - 10
+    ralsei_rect_draw.centery = susie_rect_draw.centery + 100
+    screen.blit(ralsei_img, ralsei_rect_draw)
+    # Draw battle box
+    pygame.draw.rect(screen, battle_box_color, battle_box_rect)
+    pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
+    # Draw player heart (flashing if invincible)
+    if invincible:
+        if ((pygame.time.get_ticks() // 100) % 2) == 0:
+            heart_draw_img = heart_img_0
+        else:
+            heart_draw_img = heart_img_1
+    else:
+        heart_draw_img = heart_img_0
+    screen.blit(heart_draw_img, (player_x, player_y))
+    # Draw lives counter
+    lives_surf = font.render(f"LIVES: {player_lives}", True, (255, 255, 255))
+    screen.blit(lives_surf, (50, 50))
+    # Draw Knight idle animation and trail if enabled
+    if show_knight_idle and knight_idle_img is not None:
+        float_offset = int(20 * math.sin(pygame.time.get_ticks() / 267))
+        knight_idle_rect = knight_idle_img.get_rect()
+        if knight_idle_left is not None and knight_idle_centery is not None:
+            knight_idle_rect.left = knight_idle_left
+            knight_idle_rect.centery = knight_idle_centery
+        else:
+            knight_idle_rect.centery = kris_rect_draw.centery + 20
+            knight_idle_rect.left = battle_box_rect.right + 40
+        knight_idle_rect.top += float_offset
+        trail_img = knight_idle_img.copy()
+        trail_img.set_alpha(50)
+        trail_rect = knight_idle_rect.copy()
+        trail_rect.left += 40
+        screen.blit(trail_img, trail_rect)
+        # Insert the current state at the start of the trail
+        knight_trail.insert(0, (knight_idle_img.copy(), knight_idle_rect.copy()))
+        if len(knight_trail) > trail_length:
+            knight_trail.pop()
+        # Draw the trail (oldest last, most faded)
         for i, (img, rect) in enumerate(reversed(knight_trail)):
             img = img.copy()
             img.set_alpha(trail_alphas[i])
             rect = rect.copy()
             rect.left += 40 + i * 10
             screen.blit(img, rect)
-        screen.blit(knight_point_frames[-1], knight_rect)
-        pygame.display.flip()
-        clock.tick(60)
-
-    return knight_point_frames[-1], knight_rect, knight_point_frames
+        # Draw the main Knight sprite LAST
+        screen.blit(knight_idle_img, knight_idle_rect)
 
 if __name__ == "__main__":
     main()
