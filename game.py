@@ -301,7 +301,11 @@ def main():
         triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img
     )
 
-    # --- 2 second idle break and battle box transition between attacks ---
+    # After Attack1(), before PreAttack2(), clear the screen with the background
+    bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+    screen.blit(bg_img_scaled, (0, 0))
+    pygame.display.flip()
+
     invincible = False
     show_knight_idle = True
     knight_idle_left = battle_box_rect.right + 40
@@ -316,6 +320,21 @@ def main():
         knight_idle_img, show_knight_idle, clock,
         knight_idle_left, knight_idle_centery,
         anim_duration=2000, player_speed=player_speed
+    )
+
+    # --- Start Attack2 ---
+    Attack2(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+        clock, player_speed, base_dir, knight_idle_img,
+        fountain_anim_speed=16, fountain_frame_count=4,
+        kris_anim_speed=8, kris_frame_count=None,
+        susie_anim_speed=8, susie_frame_count=None,
+        ralsei_anim_speed=8, ralsei_frame_count=None
     )
 
     pygame.quit()
@@ -584,7 +603,8 @@ def PreAttack1(
         if len(knight_trail) > trail_length:
             knight_trail.pop()
         # Draw everything
-        screen.blit(bg_img, (0, 0))
+        bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+        screen.blit(bg_img_scaled, (0, 0))
         # Draw battle box
         pygame.draw.rect(screen, battle_box_color, battle_box_rect)
         pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
@@ -632,7 +652,8 @@ def PreAttack1(
         player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
         player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
         # Redraw the final frame and trail
-        screen.blit(bg_img, (0, 0))
+        bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+        screen.blit(bg_img_scaled, (0, 0))
         pygame.draw.rect(screen, battle_box_color, battle_box_rect)
         pygame.draw.rect(screen, battle_box_border_color, battle_box_rect, battle_box_border)
         screen.blit(heart_img_0, (player_x, player_y))
@@ -787,7 +808,8 @@ def Attack1(
                 running = False
 
         # Draw background
-        screen.blit(bg_img, (0, 0))
+        bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+        screen.blit(bg_img_scaled, (0, 0))
 
         # Draw Kris's idle animation (define kris_rect first)
         kris_img = kris_idle_frames[kris_frame_idx]
@@ -1063,6 +1085,10 @@ def Attack1(
                     rect = rotated_img.get_rect(center=(int(sc['x']), int(sc['y'])))
                     if screen_rect.colliderect(rect):
                         screen.blit(rotated_img, rect)
+                    # Use full rect for hitbox
+                    if rect.collidepoint(player_center):
+                        hit_this_frame = True
+                        break
             if reverse_elapsed >= star_reverse_duration and not starchilds_exploded:
                 # Only trigger starchild explosion once, after both phases are done
                 for bullet in star_bullets:
@@ -1266,7 +1292,8 @@ def draw_main_scene(
         draw_main_scene.music_started = True
     global knight_trail, trail_length, trail_alphas
     # Draw background
-    screen.blit(bg_img, (0, 0))
+    bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+    screen.blit(bg_img_scaled, (0, 0))
     # Draw Kris
     kris_img = kris_idle_frames[kris_frame_idx]
     kris_rect_draw = kris_img.get_rect()
@@ -1335,6 +1362,408 @@ def draw_main_scene(
             screen.blit(img, rect)
         # Draw the main Knight sprite LAST
         screen.blit(knight_idle_img, knight_idle_rect)
+
+def Attack2(
+    screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+    kris_idle_frames, kris_frame_idx, kris_rect,
+    susie_idle_frames, susie_frame_idx, susie_rect,
+    ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+    battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+    heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+    clock, player_speed, base_dir, knight_idle_img,
+    fountain_anim_speed=16, fountain_frame_count=4,
+    kris_anim_speed=8, kris_frame_count=None,
+    susie_anim_speed=8, susie_frame_count=None,
+    ralsei_anim_speed=8, ralsei_frame_count=None
+):
+    
+    print('Attack2: entered')
+    import math, random
+    # Sword data structure
+    class Sword:
+        def __init__(self, spawn_time, pos, direction):
+            self.spawn_time = spawn_time
+            self.direction = direction
+            self.timer = 0.0
+            self.following = True
+            self.shot = False
+            self.removed = False
+            self.line_img = None
+            self.sword_img = None
+            self.rect = None
+            self.line_rect = None
+            self.sound_played = False
+            # Set sprite and slash
+            if direction == 'up':
+                self.sword_img = sword_imgs['up']
+                self.line_img = slash_img_horiz
+                self.pos = list(pos)
+            elif direction == 'down':
+                self.sword_img = sword_imgs['down']
+                self.line_img = slash_img_horiz
+                self.pos = list(pos)
+            elif direction == 'left':
+                self.sword_img = sword_imgs['left']
+                self.line_img = slash_img_vert
+                self.pos = list(pos)
+            elif direction == 'right':
+                self.sword_img = sword_imgs['right']
+                self.line_img = slash_img_vert
+                self.pos = list(pos)
+            elif direction == 'downright':
+                self.sword_img = pygame.transform.rotate(sword_imgs['right'], -45)
+                self.line_img = pygame.transform.rotate(slash_img_horiz, -45)
+                self.pos = [0, 0]  # Will be set in update()
+            elif direction == 'downleft':
+                self.sword_img = pygame.transform.rotate(sword_imgs['left'], 45)
+                self.line_img = pygame.transform.rotate(slash_img_horiz, 45)
+                self.pos = [0, 0]
+            elif direction == 'upleft':
+                self.sword_img = pygame.transform.rotate(sword_imgs['left'], -45)
+                self.line_img = pygame.transform.rotate(slash_img_horiz, -45)
+                self.pos = [0, 0]
+            elif direction == 'upright':
+                self.sword_img = pygame.transform.rotate(sword_imgs['right'], 45)
+                self.line_img = pygame.transform.rotate(slash_img_horiz, 45)
+                self.pos = [0, 0]
+            self.rect = self.sword_img.get_rect(center=self.pos)
+            self.line_rect = self.line_img.get_rect(center=self.pos)
+            self.is_corner = direction in ('downright', 'downleft', 'upleft', 'upright')
+            self.initialized = False  # Track if we've set the initial position for diagonals
+            # Debug print for diagonals
+            if direction in ('downright', 'downleft', 'upleft', 'upright'):
+                print(f"[DEBUG] Sword spawned: direction={direction}, pos={self.pos}")
+        def project_point_on_segment(self, px, py, x1, y1, x2, y2):
+            dx, dy = x2 - x1, y2 - y1
+            if dx == dy == 0:
+                return x1, y1
+            t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+            t = max(0, min(1, t))
+            return x1 + t * dx, y1 + t * dy
+        def update(self, player_center, now, box, border):
+            self.timer = (now - self.spawn_time) / 1000.0
+            if self.timer < 0.7:
+                if self.direction == 'up':
+                    self.pos[0] = min(max(player_center[0], box.left + margin), box.right - margin)
+                    self.pos[1] = box.bottom + margin
+                elif self.direction == 'down':
+                    self.pos[0] = min(max(player_center[0], box.left + margin), box.right - margin)
+                    self.pos[1] = box.top - margin
+                elif self.direction == 'left':
+                    self.pos[0] = box.right + margin
+                    self.pos[1] = min(max(player_center[1], box.top + margin), box.bottom - margin)
+                elif self.direction == 'right':
+                    self.pos[0] = box.left - margin
+                    self.pos[1] = min(max(player_center[1], box.top + margin), box.bottom - margin)
+            self.rect.center = self.pos
+            self.line_rect.center = self.pos
+        def draw(self, screen):
+            screen.blit(self.sword_img, self.rect)
+        def draw_line(self, screen, box, border):
+            # Draw the slash from the sword's current position to the opposite border or corner
+            if self.direction == 'up':
+                x = int(self.pos[0])
+                y0 = box.bottom
+                y1 = box.top
+                length = abs(y1 - y0)
+                slash = pygame.transform.scale(slash_img_horiz, (1, length))
+                screen.blit(slash, (x, y1))
+            elif self.direction == 'down':
+                x = int(self.pos[0])
+                y0 = box.top
+                y1 = box.bottom
+                length = abs(y1 - y0)
+                slash = pygame.transform.scale(slash_img_horiz, (1, length))
+                screen.blit(slash, (x, y0))
+            elif self.direction == 'left':
+                y = int(self.pos[1])
+                x0 = box.right
+                x1 = box.left
+                length = abs(x1 - x0)
+                slash = pygame.transform.scale(slash_img_vert, (length, 1))
+                screen.blit(slash, (x1, y))
+            elif self.direction == 'right':
+                y = int(self.pos[1])
+                x0 = box.left
+                x1 = box.right
+                length = abs(x1 - x0)
+                slash = pygame.transform.scale(slash_img_vert, (length, 1))
+                screen.blit(slash, (x0, y))
+            elif self.direction == 'downright':
+                start = (int(self.pos[0]), int(self.pos[1]))
+                end = (box.right - border, box.bottom - border)
+                pygame.draw.line(screen, (255,0,0), start, end, 3)
+                length = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5)
+                slash = pygame.transform.scale(self.line_img, (length, int(self.line_img.get_height())))
+                angle = -45
+                slash = pygame.transform.rotate(slash, angle)
+                screen.blit(slash, start)
+            elif self.direction == 'downleft':
+                start = (int(self.pos[0]), int(self.pos[1]))
+                end = (box.left + border, box.bottom - border)
+                pygame.draw.line(screen, (255,0,0), start, end, 3)
+                length = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5)
+                slash = pygame.transform.scale(self.line_img, (length, int(self.line_img.get_height())))
+                angle = 45
+                slash = pygame.transform.rotate(slash, angle)
+                screen.blit(slash, start)
+            elif self.direction == 'upleft':
+                start = (int(self.pos[0]), int(self.pos[1]))
+                end = (box.left + border, box.top + border)
+                pygame.draw.line(screen, (255,0,0), start, end, 3)
+                length = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5)
+                slash = pygame.transform.scale(self.line_img, (length, int(self.line_img.get_height())))
+                angle = -45
+                slash = pygame.transform.rotate(slash, angle)
+                screen.blit(slash, start)
+            elif self.direction == 'upright':
+                start = (int(self.pos[0]), int(self.pos[1]))
+                end = (box.right - border, box.top + border)
+                pygame.draw.line(screen, (255,0,0), start, end, 3)
+                length = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5)
+                slash = pygame.transform.scale(self.line_img, (length, int(self.line_img.get_height())))
+                angle = 45
+                slash = pygame.transform.rotate(slash, angle)
+                screen.blit(slash, start)
+    # Load sword sprites
+    sword_imgs = {
+        'up': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_up.png')).convert_alpha(),
+        'down': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_down.png')).convert_alpha(),
+        'left': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_left.png')).convert_alpha(),
+        'right': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_right.png')).convert_alpha(),
+    }
+    # Load sound
+    sword_shoot_sfx = pygame.mixer.Sound(os.path.join(base_dir, 'sprites', 'sound_effects', 'sword_shoot.wav'))
+    # Load sword slash sprites (vertical and horizontal)
+    slash_img_vert = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword_shoot', 'spr_rk_sword_shoot_vert.png')).convert_alpha()
+    slash_img_horiz = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword_shoot', 'spr_rk_sword_shoot_horiz.png')).convert_alpha()
+    # Make swords larger
+    sword_scale = 1.5
+    for k in sword_imgs:
+        w, h = sword_imgs[k].get_size()
+        sword_imgs[k] = pygame.transform.smoothscale(sword_imgs[k], (int(w * sword_scale), int(h * sword_scale)))
+    margin = int(0.5 * max(sword_imgs['up'].get_width(), sword_imgs['up'].get_height()))
+    box = battle_box_rect
+    # Anchor swords to the borders and restrict movement along the border
+    positions = [
+        (box.left, box.top - margin),            # top-center (moves along top border)
+        (box.right + margin, box.top),           # right-center (moves along right border)
+        (box.right, box.bottom + margin),        # bottom-center (moves along bottom border)
+        (box.left - margin, box.bottom),         # left-center (moves along left border)
+        (box.left - margin, box.top - margin),   # top-left (downright)
+        (box.right + margin, box.top - margin),  # top-right (downleft)
+        (box.right + margin, box.bottom + margin), # bottom-right (upleft)
+        (box.left - margin, box.bottom + margin)   # bottom-left (upright)
+    ]
+    directions = ['up', 'down', 'left', 'right']
+    num_swords = 8
+    # ... existing code ...
+    # Attack2 main loop
+    swords = []
+    attack_duration = 7000  # ms
+    sword_interval = 700  # ms
+    start_time = pygame.time.get_ticks()
+    next_sword_time = start_time
+    sword_idx = 0
+    running = True
+    invincible_until = 0
+    # Animation frame/timer setup
+    if kris_frame_count is None:
+        kris_frame_count = len(kris_idle_frames)
+    if susie_frame_count is None:
+        susie_frame_count = len(susie_idle_frames)
+    if ralsei_frame_count is None:
+        ralsei_frame_count = len(ralsei_idle_frames)
+    local_fountain_anim_timer = 0
+    local_kris_anim_timer = 0
+    local_susie_anim_timer = 0
+    local_ralsei_anim_timer = 0
+    # Use the incoming frame indices as starting points
+    local_fountain_frame_idx = fountain_frame_idx
+    local_kris_frame_idx = kris_frame_idx
+    local_susie_frame_idx = susie_frame_idx
+    local_ralsei_frame_idx = ralsei_frame_idx
+    while running:
+        print('Attack2: main loop running')
+        now = pygame.time.get_ticks()
+        # Advance animation timers and frame indices
+        local_fountain_anim_timer += 1
+        if local_fountain_anim_timer >= fountain_anim_speed:
+            local_fountain_frame_idx = (local_fountain_frame_idx + 1) % fountain_frame_count
+            local_fountain_anim_timer = 0
+        local_kris_anim_timer += 1
+        if local_kris_anim_timer >= kris_anim_speed:
+            local_kris_frame_idx = (local_kris_frame_idx + 1) % kris_frame_count
+            local_kris_anim_timer = 0
+        local_susie_anim_timer += 1
+        if local_susie_anim_timer >= susie_anim_speed:
+            local_susie_frame_idx = (local_susie_frame_idx + 1) % susie_frame_count
+            local_susie_anim_timer = 0
+        local_ralsei_anim_timer += 1
+        if local_ralsei_anim_timer >= ralsei_anim_speed:
+            local_ralsei_frame_idx = (local_ralsei_frame_idx + 1) % ralsei_frame_count
+            local_ralsei_anim_timer = 0
+        # Spawn swords
+        # Prepare a shuffled, non-repeating side list for sword spawns
+        if sword_idx == 0:
+            spawn_sides = []
+            last_side = None
+            while len(spawn_sides) < num_swords:
+                side = random.choice(directions)
+                if side != last_side:
+                    spawn_sides.append(side)
+                    last_side = side
+        if sword_idx < num_swords and now >= next_sword_time:
+            side = spawn_sides[sword_idx]
+            # Pick a random offset along the side (avoid edges)
+            if side == 'up':
+                offset = random.randint(30, box.width - 30)
+                pos = (box.left + offset, box.top - margin)
+            elif side == 'down':
+                offset = random.randint(30, box.width - 30)
+                pos = (box.left + offset, box.bottom + margin)
+            elif side == 'left':
+                offset = random.randint(30, box.height - 30)
+                pos = (box.left - margin, box.top + offset)
+            elif side == 'right':
+                offset = random.randint(30, box.height - 30)
+                pos = (box.right + margin, box.top + offset)
+            swords.append(Sword(now, pos, side))
+            sword_idx += 1
+            next_sword_time += sword_interval
+        # Handle events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                running = False
+        # Handle player movement
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            player_x += player_speed
+        if keys[pygame.K_UP]:
+            player_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            player_y += player_speed
+        # Clamp player position to inside the battle box
+        playable_rect = battle_box_rect.inflate(-2 * battle_box_border, -2 * battle_box_border)
+        player_x = max(playable_rect.left, min(player_x, playable_rect.right - heart_size))
+        player_y = max(playable_rect.top, min(player_y, playable_rect.bottom - heart_size))
+        player_rect = pygame.Rect(player_x, player_y, heart_size, heart_size)
+        player_center = (player_x + heart_size // 2, player_y + heart_size // 2)
+        # Draw everything
+        bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+        screen.blit(bg_img_scaled, (0, 0))
+        # Draw scene (heroes, box, etc.)
+        draw_main_scene(
+            screen, bg_img, fountain_scaled_frames, local_fountain_frame_idx,
+            kris_idle_frames, local_kris_frame_idx, kris_rect,
+            susie_idle_frames, local_susie_frame_idx, susie_rect,
+            ralsei_idle_frames, local_ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False
+        )
+        # --- Knight idle animation and trail (added for Attack2) ---
+        float_offset = int(20 * math.sin(pygame.time.get_ticks() / 267))
+        knight_idle_rect = knight_idle_img.get_rect()
+        knight_idle_rect.centery = kris_rect.centery + 20
+        knight_idle_rect.left = battle_box_rect.right + 40
+        knight_idle_rect.top += float_offset
+        trail_img = knight_idle_img.copy()
+        trail_img.set_alpha(50)
+        trail_rect = knight_idle_rect.copy()
+        trail_rect.left += 40
+        screen.blit(trail_img, trail_rect)
+        knight_trail.insert(0, (knight_idle_img.copy(), knight_idle_rect.copy()))
+        if len(knight_trail) > trail_length:
+            knight_trail.pop()
+        for i, (img, rect) in enumerate(reversed(knight_trail)):
+            img = img.copy()
+            img.set_alpha(trail_alphas[i])
+            rect = rect.copy()
+            rect.left += 40 + i * 10
+            screen.blit(img, rect)
+        screen.blit(knight_idle_img, knight_idle_rect)
+        # --- End knight idle animation and trail ---
+        # Draw swords and lines
+        for sword in swords:
+            if sword.timer < 1.0:
+                sword.update(player_center, now, box, battle_box_border)
+                sword.draw(screen)
+                # Play sound and draw line at 0.9s
+                if sword.timer >= 0.9 and not sword.sound_played:
+                    sword_shoot_sfx.play()
+                    sword.sound_played = True
+                if sword.timer >= 0.9:
+                    sword.draw_line(screen, box, battle_box_border)
+            else:
+                sword.removed = True
+        # Remove swords that are done
+        swords = [s for s in swords if not s.removed]
+        # Collision detection
+        hit_this_frame = False
+        for sword in swords:
+            if sword.rect.colliderect(player_rect):
+                hit_this_frame = True
+                break
+            if sword.timer >= 0.9:
+                # Make the slash hitbox larger
+                if sword.direction in ('up', 'down'):
+                    # Horizontal slash: much taller hitbox
+                    slash_hitbox = pygame.Rect(
+                        int(sword.pos[0]) - 24, box.top, 48, box.height
+                    )
+                elif sword.direction in ('left', 'right'):
+                    # Vertical slash: much wider hitbox
+                    slash_hitbox = pygame.Rect(
+                        box.left, int(sword.pos[1]) - 24, box.width, 48
+                    )
+                else:
+                    # Diagonal: use a larger square at the center line
+                    slash_hitbox = pygame.Rect(
+                        box.left, box.top, box.width, box.height
+                    )
+                if slash_hitbox.colliderect(player_rect):
+                    hit_this_frame = True
+                    break
+        # Invincibility logic
+        if pygame.time.get_ticks() < invincible_until:
+            invincible = True
+        else:
+            invincible = False
+        if hit_this_frame and not invincible:
+            player_lives = max(0, player_lives - 1)
+            invincible_until = pygame.time.get_ticks() + 1000  # 1 second invincibility
+            invincible = True
+        # Draw lives counter
+        lives_surf = font.render(f"LIVES: {player_lives}", True, (255, 255, 255))
+        screen.blit(lives_surf, (50, 50))
+        # Draw player heart (flashing if invincible)
+        if invincible:
+            if ((pygame.time.get_ticks() // 100) % 2) == 0:
+                heart_draw_img = heart_img_0
+            else:
+                heart_draw_img = heart_img_1
+        else:
+            heart_draw_img = heart_img_0
+        screen.blit(heart_draw_img, (player_x, player_y))
+        pygame.display.flip()
+        clock.tick(60)
+        # End condition
+        if now - start_time > attack_duration and not swords:
+            running = False
+
+        # Draw debug circles at the intended corners
+        corners = [
+            (box.left + battle_box_border, box.top + battle_box_border),
+            (box.right - battle_box_border, box.top + battle_box_border),
+            (box.right - battle_box_border, box.bottom - battle_box_border),
+            (box.left + battle_box_border, box.bottom - battle_box_border),
+        ]
+        for c in corners:
+            pygame.draw.circle(screen, (0,255,0), (int(c[0]), int(c[1])), 8)
+
+# ... existing code ...
 
 if __name__ == "__main__":
     main()
