@@ -1390,24 +1390,30 @@ def Attack2(
             self.removed = False
             self.line_img = None
             self.sword_img = None
+            self.sword_img_red = None
+            self.turned_red = False
             self.rect = None
             self.line_rect = None
             self.sound_played = False
             # Set sprite and slash
             if direction == 'up':
                 self.sword_img = sword_imgs['up']
+                self.sword_img_red = sword_imgs_red['up']
                 self.line_img = slash_img_horiz
                 self.pos = list(pos)
             elif direction == 'down':
                 self.sword_img = sword_imgs['down']
+                self.sword_img_red = sword_imgs_red['down']
                 self.line_img = slash_img_horiz
                 self.pos = list(pos)
             elif direction == 'left':
                 self.sword_img = sword_imgs['left']
+                self.sword_img_red = sword_imgs_red['left']
                 self.line_img = slash_img_vert
                 self.pos = list(pos)
             elif direction == 'right':
                 self.sword_img = sword_imgs['right']
+                self.sword_img_red = sword_imgs_red['right']
                 self.line_img = slash_img_vert
                 self.pos = list(pos)
             elif direction == 'downright':
@@ -1457,6 +1463,10 @@ def Attack2(
                     self.pos[1] = min(max(player_center[1], box.top + margin), box.bottom - margin)
             self.rect.center = self.pos
             self.line_rect.center = self.pos
+        def turn_red(self):
+            if not self.turned_red and self.sword_img_red is not None:
+                self.sword_img = self.sword_img_red
+                self.turned_red = True
         def draw(self, screen):
             screen.blit(self.sword_img, self.rect)
         def draw_line(self, screen, box, border):
@@ -1532,6 +1542,12 @@ def Attack2(
         'left': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_left.png')).convert_alpha(),
         'right': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_right.png')).convert_alpha(),
     }
+    sword_imgs_red = {
+        'up': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_up_red.png')).convert_alpha(),
+        'down': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_down_red.png')).convert_alpha(),
+        'left': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_left_red.png')).convert_alpha(),
+        'right': pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_right_red.png')).convert_alpha(),
+    }
     # Load sound
     sword_shoot_sfx = pygame.mixer.Sound(os.path.join(base_dir, 'sprites', 'sound_effects', 'sword_shoot.wav'))
     # Load sword slash sprites (vertical and horizontal)
@@ -1542,6 +1558,9 @@ def Attack2(
     for k in sword_imgs:
         w, h = sword_imgs[k].get_size()
         sword_imgs[k] = pygame.transform.smoothscale(sword_imgs[k], (int(w * sword_scale), int(h * sword_scale)))
+        # Also scale the red versions
+        w_red, h_red = sword_imgs_red[k].get_size()
+        sword_imgs_red[k] = pygame.transform.smoothscale(sword_imgs_red[k], (int(w * sword_scale), int(h * sword_scale)))
     margin = int(0.5 * max(sword_imgs['up'].get_width(), sword_imgs['up'].get_height()))
     box = battle_box_rect
     # Anchor swords to the borders and restrict movement along the border
@@ -1584,7 +1603,6 @@ def Attack2(
     local_susie_frame_idx = susie_frame_idx
     local_ralsei_frame_idx = ralsei_frame_idx
     while running:
-        print('Attack2: main loop running')
         now = pygame.time.get_ticks()
         # Advance animation timers and frame indices
         local_fountain_anim_timer += 1
@@ -1690,8 +1708,9 @@ def Attack2(
             if sword.timer < 1.0:
                 sword.update(player_center, now, box, battle_box_border)
                 sword.draw(screen)
-                # Play sound and draw line at 0.9s
-                if sword.timer >= 0.9 and not sword.sound_played:
+                # Play sound and draw line at 0.8s
+                if sword.timer >= 0.75 and not sword.sound_played:
+                    sword.turn_red()
                     sword_shoot_sfx.play()
                     sword.sound_played = True
                 if sword.timer >= 0.9:
@@ -1762,8 +1781,6 @@ def Attack2(
         ]
         for c in corners:
             pygame.draw.circle(screen, (0,255,0), (int(c[0]), int(c[1])), 8)
-
-# ... existing code ...
 
 if __name__ == "__main__":
     main()
