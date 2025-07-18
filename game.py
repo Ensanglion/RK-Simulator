@@ -301,6 +301,7 @@ def main():
         triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img
     )
     attack1.run()
+    player_lives = attack1.player_lives
 
     # After Attack1(), before PreAttack2(), clear the screen with the background
     bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
@@ -335,9 +336,10 @@ def main():
         fountain_anim_speed=16, fountain_frame_count=4,
         kris_anim_speed=8, kris_frame_count=None,
         susie_anim_speed=8, susie_frame_count=None,
-        ralsei_anim_speed=8, ralsei_frame_count=None
+                 ralsei_anim_speed=8, ralsei_frame_count=None, show_wheel=False
     )
     attack2.run()
+    player_lives = attack2.player_lives
 
     # After Attack2(), before PreAttack3(), clear the screen with the background
     bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
@@ -368,10 +370,11 @@ def main():
         cut_mode='vertical', cycles=7, player_speed=player_speed
     )
     attack3.run()
+    player_lives = attack3.player_lives
 
-    # 1 second of idle animation before Attack4
+    # 0.5 second of idle animation before Attack4
     idle_start = pygame.time.get_ticks()
-    while pygame.time.get_ticks() - idle_start < 1000:
+    while pygame.time.get_ticks() - idle_start < 500:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
@@ -415,6 +418,7 @@ def main():
         base_dir=base_dir, player_speed=player_speed
     )
     attack4.run()
+    player_lives = attack4.player_lives
 
     # After Attack4(), before Attack5(), clear the screen with the background
     bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
@@ -444,6 +448,7 @@ def main():
         base_dir=base_dir, player_speed=player_speed
     )
     attack5.run()
+    player_lives = attack5.player_lives
 
     # After Attack5(), before Attack6(), clear the screen with the background
     bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
@@ -497,6 +502,7 @@ def main():
         starchild_scale=1.2
     )
     attack6.run()
+    player_lives = attack6.player_lives
 
     # After Attack6(), before Attack7(), clear the screen with the background
     bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
@@ -516,6 +522,127 @@ def main():
         cycles=7, base_dir=base_dir, player_speed=player_speed
     )
     attack7.run()
+    player_lives = attack7.attack3.player_lives
+
+    # After Attack7(), before PreAttack2(), clear the screen with the background
+    bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+    screen.blit(bg_img_scaled, (0, 0))
+    pygame.display.flip()
+
+    invincible = False
+    show_knight_idle = True
+    knight_idle_left = battle_box_rect.right + 40
+    knight_idle_centery = kris_rect.centery + 20
+    battle_box_rect, player_x, player_y = PreAttack2(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, original_battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+        knight_idle_img, show_knight_idle, clock,
+        knight_idle_left, knight_idle_centery,
+        anim_duration=2000, player_speed=player_speed
+    )
+
+    # --- Attack8: Sword Wheel ---
+    attack8 = Attack8(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+        clock, 5, base_dir, knight_idle_img,
+        show_wheel=True
+    )
+    attack8.run()
+    player_lives = attack8.player_lives
+
+    # After Attack8(), before Attack9(), clear the screen with the background
+    bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+    screen.blit(bg_img_scaled, (0, 0))
+    pygame.display.flip()
+
+# 0.5 second of idle animation before Attack4
+    idle_start = pygame.time.get_ticks()
+    while pygame.time.get_ticks() - idle_start < 500:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+        draw_main_scene(
+            screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False,
+            knight_idle_img, show_knight_idle, clock
+        )
+        pygame.display.flip()
+        clock.tick(60)
+
+    # Define Attack9 sequences (all using the last slash from Attack5)
+    attack9_sequences = [
+        ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+        ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+        ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+        ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+        ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png')
+    ]
+
+    attack9 = Attack5(  # Reusing the same Attack5 class
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+        knight_idle_img, show_knight_idle, clock,
+        base_dir=base_dir, player_speed=player_speed,
+        sequences=attack9_sequences  # Pass the custom sequences here
+    )
+    attack9.run()
+    player_lives = attack9.player_lives
+
+    # After Attack9(), before Attack10(), clear the screen with the background
+    bg_img_scaled = pygame.transform.scale(bg_img, (screen.get_width(), screen.get_height()))
+    screen.blit(bg_img_scaled, (0, 0))
+    pygame.display.flip()
+
+# 0.5 second of idle animation before Attack4
+    idle_start = pygame.time.get_ticks()
+    while pygame.time.get_ticks() - idle_start < 500:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+        draw_main_scene(
+            screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, False,
+            knight_idle_img, show_knight_idle, clock
+        )
+        pygame.display.flip()
+        clock.tick(60)
+
+    # --- Attack10: Slash Wheel ---
+    attack10 = Attack10(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+        knight_idle_img, show_knight_idle, clock,
+        base_dir=base_dir, player_speed=player_speed
+    )
+    attack10.run()
+    player_lives = attack10.player_lives
 
     pygame.quit()
     sys.exit()
@@ -586,6 +713,9 @@ def play_battle_intro(screen, bg_img, fountain_scaled_frames, fountain_frame_idx
     knight_idle_base_y = knight_rect.top
 
     clock = pygame.time.Clock()
+    # Prepare sound effect for knight intro
+    battle_start_sfx = pygame.mixer.Sound(os.path.join(base_dir, 'sprites', 'sound_effects', 'battle_start.wav'))
+    battle_start_sfx_played = False
     for i in range(max_frames):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -624,6 +754,10 @@ def play_battle_intro(screen, bg_img, fountain_scaled_frames, fountain_frame_idx
             screen.blit(knight_intro_frames[i], knight_rect)
         elif i < knight_pause_frame + knight_pause_duration:
             screen.blit(knight_intro_frames[knight_pause_frame], knight_rect)
+            # Play sound at the second to last frame (index knight_pause_frame-2)
+            if i == 12 and not battle_start_sfx_played:
+                battle_start_sfx.play()
+                battle_start_sfx_played = True
         elif (i - knight_pause_duration) < knight_len:
             screen.blit(knight_intro_frames[i - knight_pause_duration], knight_rect)
         else:
@@ -1023,7 +1157,7 @@ class Attack1:
         self.star_bullets_spawned = False
         self.star_bullet_base_speed = 700
         self.star_bullet_duration = 3000
-        self.num_star_bullets = 25
+        self.num_star_bullets = 20
         self.star_attack_sfx = pygame.mixer.Sound(os.path.join(self.base_dir, 'sprites', 'sound_effects', 'star_attack.wav'))
 
         # Add a phase for star bullet reversal
@@ -1058,6 +1192,7 @@ class Attack1:
         self.starchilds_display_start = None
         
         self.screen_rect = self.screen.get_rect()
+
     def run(self):
         global knight_trail, trail_length, trail_alphas
         running = True
@@ -1392,7 +1527,7 @@ class Attack1:
                     self.starchilds_display_start = now
                 # After explosion, display starchilds for 1 second before switching to idle
                 if self.starchilds_exploded and self.starchilds_display_start is not None:
-                    if now - self.starchilds_display_start > 1000:
+                    if now - self.starchilds_display_start > 1500:
                         # Clear starchilds before switching to idle, before any drawing
                         self.starchilds.clear()
                         self.attack_phase = 'idle'
@@ -1689,8 +1824,8 @@ def draw_main_scene(
     knight_idle_left=None, knight_idle_centery=None
 ):  
     if not hasattr(draw_main_scene, "music_started"):
-        pygame.mixer.music.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'black_knife.ogg'))
-        pygame.mixer.music.play(-1)
+        pygame.mixer.music.load(os.path.join('black_knife.ogg'))
+        pygame.mixer.music.play(-1)  
         draw_main_scene.music_started = True
     global knight_trail, trail_length, trail_alphas
     # Draw background
@@ -1777,7 +1912,7 @@ class Attack2:
     fountain_anim_speed=16, fountain_frame_count=4,
     kris_anim_speed=8, kris_frame_count=None,
     susie_anim_speed=8, susie_frame_count=None,
-                 ralsei_anim_speed=8, ralsei_frame_count=None):
+                 ralsei_anim_speed=8, ralsei_frame_count=None, show_wheel=False):
         
         self.screen = screen
         self.bg_img = bg_img
@@ -1821,6 +1956,21 @@ class Attack2:
         # Attack state
         self.state = 'running'
         self.invincible_until = 0
+        
+        # Wheel properties (must be set before load_assets)
+        self.show_wheel = show_wheel
+        self.wheel_base_img = None
+        self.wheel_angle = 0.0  # in degrees
+        self.wheel_pos = None
+        self.wheel_target_pos = None
+        if self.show_wheel:
+            center = (self.player_x + self.heart_size // 2, self.player_y + self.heart_size // 2)
+            self.wheel_pos = list(center)
+            self.wheel_target_pos = list(center)
+            self.wheel_slide_timer = 0
+            self.wheel_slide_interval = 1000  # ms
+            self.wheel_slide_duration = 200   # ms
+            self.wheel_slide_progress = 1.0   # 1.0 = at target
         
         # Load assets
         self.load_assets()
@@ -1875,6 +2025,15 @@ class Attack2:
             self.sword_imgs_red[k] = pygame.transform.smoothscale(self.sword_imgs_red[k], (int(w * sword_scale), int(h * sword_scale)))
         
         self.margin = int(0.5 * max(self.sword_imgs['up'].get_width(), self.sword_imgs['up'].get_height()))
+        
+        # Wheel asset loading
+        if self.show_wheel:
+            img_path = os.path.join(self.base_dir, 'sprites', 'spr_rk_swordwheel', 'spr_rk_swordwheel_0.png')
+            img = pygame.image.load(img_path).convert_alpha()
+            self.wheel_base_img = pygame.transform.smoothscale(img, (350, 350))
+            self.wheel_frame_count = 1
+            self.wheel_frame_idx = 0
+            self.wheel_anim_timer = 0
 
     # Sword data structure
     class Sword:
@@ -2051,6 +2210,10 @@ class Attack2:
         # Remove swords that are done
         self.swords = [s for s in self.swords if not s.removed]
         
+        # Check if attack is done (all swords spawned and all swords removed)
+        if self.sword_idx >= self.num_swords and len(self.swords) == 0:
+            self.state = 'done'
+        
         # Collision detection
         hit_this_frame = False
         player_rect = pygame.Rect(self.player_x, self.player_y, self.heart_size, self.heart_size)
@@ -2074,6 +2237,27 @@ class Attack2:
                 if slash_hitbox.colliderect(player_rect):
                     hit_this_frame = True
                     break
+        # Sword wheel collision (Attack8/Attack2 with show_wheel)
+        if self.show_wheel:
+            # Rotate wheel
+            rotated = pygame.transform.rotate(self.wheel_base_img, self.wheel_angle)
+            wheel_rect = rotated.get_rect(center=(int(self.wheel_pos[0]), int(self.wheel_pos[1])))
+
+            # Get wheel center
+            wheel_cx, wheel_cy = int(self.wheel_pos[0]), int(self.wheel_pos[1])
+            player_cx = self.player_x + self.heart_size // 2
+            player_cy = self.player_y + self.heart_size // 2
+
+            # These should match the actual ring in your image!
+            outer_radius = self.wheel_base_img.get_width() // 2 - 10  # -10 for padding
+            inner_radius = outer_radius - 60  # adjust 60 to match the thickness of the sword ring
+
+            dx = player_cx - wheel_cx
+            dy = player_cy - wheel_cy
+            dist_squared = dx * dx + dy * dy
+
+            if inner_radius ** 2 < dist_squared < outer_radius ** 2:
+                hit_this_frame = True
         
         # Invincibility logic
         if pygame.time.get_ticks() < self.invincible_until:
@@ -2084,9 +2268,21 @@ class Attack2:
             self.player_lives = max(0, self.player_lives - 1)
             self.invincible_until = pygame.time.get_ticks() + 1000  # 1 second invincibility
         
-        # Check if attack is done
-        if now - self.start_time > self.attack_duration and not self.swords:
-            self.state = 'done'
+        # --- Wheel animation and follow logic ---
+        if self.show_wheel:
+            # Rotate wheel by 6 degrees per frame
+            self.wheel_angle = (self.wheel_angle - 4) % 360
+
+            # --- Follow logic ---
+            player_center = [self.player_x + self.heart_size // 2, self.player_y + self.heart_size // 2]
+            max_move = 0.4 * self.player_speed
+            dx = player_center[0] - self.wheel_pos[0]
+            dy = player_center[1] - self.wheel_pos[1]
+            dist = (dx ** 2 + dy ** 2) ** 0.5
+            if dist > 1e-3:
+                move_dist = min(dist, max_move)
+                self.wheel_pos[0] += dx / dist * move_dist
+                self.wheel_pos[1] += dy / dist * move_dist
 
     def draw(self):
         # Draw background
@@ -2150,6 +2346,14 @@ class Attack2:
         else:
             heart_draw_img = self.heart_img_0
         self.screen.blit(heart_draw_img, (self.player_x, self.player_y))
+        
+        # --- Wheel drawing ---
+        if self.show_wheel:
+            rotated = pygame.transform.rotate(self.wheel_base_img, self.wheel_angle)
+            wheel_rect = rotated.get_rect(center=(int(self.wheel_pos[0]), int(self.wheel_pos[1])))
+            self.screen.blit(rotated, wheel_rect)
+            
+
         
         pygame.display.flip()
 
@@ -2225,6 +2429,8 @@ class Attack3:
             self.cut_modes = ['vertical'] * cycles
         self.load_assets()
         self.reset_state()
+        self.box_cut_slash_sfx = pygame.mixer.Sound(os.path.join(self.base_dir, 'sprites', 'sound_effects', 'box_cut_slash.wav'))
+        self.box_cut_slash_played = False
 
     def load_assets(self):
         # Knight attack animation (scale to idle size)
@@ -2274,6 +2480,7 @@ class Attack3:
             # Update cut frames based on current mode
             self.cut_frames = self.cut_frames_vert if self.cut_mode == 'vertical' else self.cut_frames_horiz
         # Don't reset player_x/y so movement is preserved
+        self.box_cut_slash_played = False  # Reset sound flag for each slash
 
     def handle_player_movement(self):
         keys = pygame.key.get_pressed()
@@ -2318,6 +2525,10 @@ class Attack3:
         if self.state == 'knight_anim':
             frame_duration = 1000 // len(self.knight_attack_frames)
             self.knight_frame_idx = min(self.state_timer // frame_duration, len(self.knight_attack_frames) - 1)
+            # Play slash sound at second last frame
+            if (self.knight_frame_idx == len(self.knight_attack_frames) - 2) and not self.box_cut_slash_played:
+                self.box_cut_slash_sfx.play()
+                self.box_cut_slash_played = True
             if self.state_timer >= 1000:
                 self.state = 'cut_anim'
                 self.state_timer = 0
@@ -2337,7 +2548,7 @@ class Attack3:
             if self.cut_mode == 'vertical':
                 left_box, right_box = self.boxes
                 left_box.left = self.battle_box_rect.left - int(move_dist * t)
-                right_box.left = self.battle_box_rect.left + self.battle_box_rect.width // 2 + int(move_dist * t)
+                right_box.left = self.battle_box_rect.left + self.battle_box_rect.width // 2 + int(move_dist * t) + 50
             else:
                 top_box, bottom_box = self.boxes
                 top_box.top = self.battle_box_rect.top - int(move_dist * t)
@@ -2394,13 +2605,25 @@ class Attack3:
             self.boxes = [left_box, right_box]
         else:
             w, h = self.battle_box_rect.width, self.battle_box_rect.height
-            top_box = pygame.Rect(self.battle_box_rect.left, self.battle_box_rect.top, w, h // 2)
-            bottom_box = pygame.Rect(self.battle_box_rect.left, self.battle_box_rect.top + h // 2, w, h // 2)
+            base_half_height = h // 2
+            extra = 50  # amount to stretch each box
+            new_half_height = base_half_height + extra
+
+            # Keep the gap at the center the same by anchoring split at center
+            center_y = self.battle_box_rect.centery
+
+            # Top box: start above center and grow upward
+            top_box_top = center_y - new_half_height
+            top_box = pygame.Rect(self.battle_box_rect.left, top_box_top, w, new_half_height)
+
+            # Bottom box: start at center and grow downward
+            bottom_box_top = center_y
+            bottom_box = pygame.Rect(self.battle_box_rect.left, bottom_box_top, w, new_half_height)
+
             py = self.player_y + self.heart_size // 2
-            if py < self.battle_box_rect.centery:
-                self.player_in_left = True
-            else:
-                self.player_in_left = False
+            self.player_in_left = py < center_y
+            self.boxes = [top_box, bottom_box]
+
             self.boxes = [top_box, bottom_box]
         playable_rect = self.boxes[0] if self.player_in_left else self.boxes[1]
         playable_rect = playable_rect.inflate(-2 * self.battle_box_border, -2 * self.battle_box_border)
@@ -2415,8 +2638,8 @@ class Attack3:
             left_bullets = []
             right_bullets = []
             for y in y_positions:
-                left_bullets.append({'x': self.boxes[0].right + 30, 'y': y, 'vx': -2.5, 'img': self.tooth_left})
-                right_bullets.append({'x': self.boxes[1].left - 30, 'y': y, 'vx': 2.5, 'img': self.tooth_right})
+                left_bullets.append({'x': self.boxes[0].right + 50, 'y': y, 'vx': -2.5, 'img': self.tooth_left})
+                right_bullets.append({'x': self.boxes[1].left - 70, 'y': y, 'vx': 2.5, 'img': self.tooth_right})
             # Randomly pick 3 on each side to double speed
             left_fast = random.sample(range(7), 3)
             right_fast = random.sample(range(7), 3)
@@ -2431,14 +2654,14 @@ class Attack3:
             top_bullets = []
             bottom_bullets = []
             for x in x_positions:
-                top_bullets.append({'x': x, 'y': self.boxes[0].bottom + 30, 'vy': -2.5, 'img': self.tooth_up})
-                bottom_bullets.append({'x': x, 'y': self.boxes[1].top - 30, 'vy': 2.5, 'img': self.tooth_down})
+                top_bullets.append({'x': x, 'y': self.boxes[0].bottom + 50, 'vy': -2.5, 'img': self.tooth_up})
+                bottom_bullets.append({'x': x, 'y': self.boxes[1].top - 50, 'vy': 2.5, 'img': self.tooth_down})
             top_fast = random.sample(range(7), 3)
             bottom_fast = random.sample(range(7), 3)
             for i in top_fast:
-                top_bullets[i]['vy'] *= 4
+                top_bullets[i]['vy'] *= 3
             for i in bottom_fast:
-                bottom_bullets[i]['vy'] *= 4
+                bottom_bullets[i]['vy'] *= 3
             self.bullets = top_bullets + bottom_bullets
 
     def run(self):
@@ -2583,10 +2806,9 @@ class SwordTunnelSword:
         self.red = self._red_state
 
     def get_rect(self):
-        img = self.up_img if self.direction == 'up' else self.down_img
+        img = self.up_img
         rect = img.get_rect()
-        rect.left = int(self.x)
-        rect.top = int(self.y)
+        rect.center = (int(self.x), int(self.y))
         return rect
 
     def draw(self, screen):
@@ -2598,14 +2820,12 @@ class SwordTunnelSword:
             timg = timg.copy()
             timg.set_alpha(self.trail_alphas[i])
             rect = timg.get_rect()
-            rect.left = int(tx)
-            rect.top = int(ty)
+            rect.center = (int(tx), int(ty))
             screen.blit(timg, rect)
         main_img = img_red if self.red else img
         main_img = pygame.transform.rotate(main_img, self.angle)
         rect = main_img.get_rect()
-        rect.left = int(self.x)
-        rect.top = int(self.y)
+        rect.center = (int(self.x), int(self.y))
         screen.blit(main_img, rect)
 
 
@@ -2753,9 +2973,14 @@ class Attack4:
                     # Center the sword pair in the battle box
                     base_center_y = self.battle_box_rect.centery
                     # Position the UP sword above center
-                    up_y = base_center_y - self.up_img.get_height() - gap // 2 + heart_offset
-                    # Position the DOWN sword below center (gap is between bottom of up sword and top of down sword)
-                    down_y = base_center_y + gap // 2 + heart_offset
+                    # Get half-height of sword images
+                    up_half = self.up_img.get_height() // 2
+                    down_half = self.down_img.get_height() // 2
+
+                    # Center the swords around the gap using .center alignment
+                    up_y = base_center_y - gap // 2 - up_half + heart_offset
+                    down_y = base_center_y + gap // 2 + down_half + heart_offset
+
 
                     # Only clamp if the pair would go completely out of bounds
                     # If down sword would go above the box, shift both down
@@ -2807,7 +3032,12 @@ class Attack4:
             hit_this_frame = False
             for sword in self.swords:
                 sword_rect = sword.get_rect()
-                hitbox = sword_rect.inflate(-5, -5)  # Shrink hitbox by 20px on each side
+                # Create hitbox that's 85% of the sprite size
+                hitbox_width = int(sword_rect.width * 0.85)
+                hitbox_height = int(sword_rect.height * 0.85)
+                hitbox_x = sword_rect.centerx - hitbox_width // 2
+                hitbox_y = sword_rect.centery - hitbox_height // 2
+                hitbox = pygame.Rect(hitbox_x, hitbox_y, hitbox_width, hitbox_height)
                 heart_rect = pygame.Rect(self.player_x, self.player_y, self.heart_size, self.heart_size)
                 if hitbox.colliderect(heart_rect):
                     if now2 > self.invincible_until:
@@ -3230,6 +3460,579 @@ class Attack7:
     
     def is_done(self):
         return self.attack3.is_done()
+
+class Attack8(Attack2):
+    def __init__(self, *args, **kwargs):
+        kwargs['show_wheel'] = True
+        super().__init__(*args, **kwargs)
+
+# --- Attack10: Slash Wheel ---
+class Attack10:
+    def __init__(self, screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+                 kris_idle_frames, kris_frame_idx, kris_rect,
+                 susie_idle_frames, susie_frame_idx, susie_rect,
+                 ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+                 battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+                 heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+                 knight_idle_img, show_knight_idle, clock,
+                 base_dir=None, player_speed=2):
+        self.screen = screen
+        self.bg_img = bg_img
+        self.fountain_scaled_frames = fountain_scaled_frames
+        self.fountain_frame_idx = fountain_frame_idx
+        self.kris_idle_frames = kris_idle_frames
+        self.kris_frame_idx = kris_frame_idx
+        self.kris_rect = kris_rect
+        self.susie_idle_frames = susie_idle_frames
+        self.susie_frame_idx = susie_frame_idx
+        self.susie_rect = susie_rect
+        self.ralsei_idle_frames = ralsei_idle_frames
+        self.ralsei_frame_idx = ralsei_frame_idx
+        self.ralsei_rect = ralsei_rect
+        self.battle_box_rect = battle_box_rect.copy()
+        self.battle_box_color = battle_box_color
+        self.battle_box_border_color = battle_box_border_color
+        self.battle_box_border = battle_box_border
+        self.heart_img_0 = heart_img_0
+        self.heart_img_1 = heart_img_1
+        self.player_x = player_x
+        self.player_y = player_y
+        self.heart_size = heart_size
+        self.font = font
+        self.player_lives = player_lives
+        self.invincible = invincible
+        self.invincible_until = 0
+        self.knight_idle_img = knight_idle_img
+        self.show_knight_idle = show_knight_idle
+        self.clock = clock
+        self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
+        self.player_speed = player_speed
+        self.state = 'attack9'  # 'attack9' or 'slash_wheel'
+        self.attack9 = None
+        self.slash_wheel_done = False
+        self.play_slashwheel_sfx_cycle = 0
+        # --- Knight sprite trail (ghost afterimage) ---
+        self.knight_trail = []
+        self.trail_length = 10
+        self.trail_alphas = [80, 70, 60, 50, 40, 30, 20, 15, 10, 5][:self.trail_length]
+        self.load_assets()
+
+    def load_assets(self):
+        # Flurry animation
+        flurry_dir = os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_flurry')
+        # Load and scale flurry frames to match knight idle size (3x)
+        knight_idle_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_idle.png')).convert_alpha()
+        knight_target_size = (int(knight_idle_img.get_width() * 3), int(knight_idle_img.get_height() * 3))
+        self.flurry_frames = [pygame.transform.smoothscale(
+            pygame.image.load(os.path.join(flurry_dir, f'spr_roaringknight_flurry_{i}.png')).convert_alpha(),
+            knight_target_size
+        ) for i in range(3)]
+        self.flurry_frame_idx = 0
+        self.flurry_anim_timer = 0
+        self.flurry_anim_speed = 4  # frames per sprite
+        # Slash sprite
+        spinslash_dir = os.path.join(self.base_dir, 'sprites', 'spr_rk_spinslash')
+        self.spinslash_img = pygame.image.load(os.path.join(spinslash_dir, 'spr_rk_spinslash_red.png')).convert_alpha()
+        # --- NEW: Load alt slash animation frames for marks ---
+        slash_dir = os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_slash_red_alt')
+        self.slash_anim_frames = []
+        for i in range(5, 10):
+            frame_path = os.path.join(slash_dir, f'spr_roaringknight_slash_red_alt_{i}.png')
+            if os.path.exists(frame_path):
+                self.slash_anim_frames.append(pygame.image.load(frame_path).convert_alpha())
+        self.slash_anim_frames_count = len(self.slash_anim_frames)
+        self.slash_anim_advance_per_frame = 2  # 2 frames per game frame
+        # For scaling
+        self.box_side = self.battle_box_rect.width
+        self.box_height = self.battle_box_rect.height
+        # Slash wheel state
+        self.slash_wheel_total_spins = 2  # 2 full turns
+        self.slash_wheel_angle_step = 6   # 4 degrees per slash
+        self.slash_wheel_current_angle = 0.0
+        self.slash_wheel_slashes_done = 0
+        self.slash_wheel_max_slashes = int(360 / self.slash_wheel_angle_step * self.slash_wheel_total_spins)
+        self.slash_wheel_anim_frame = 0
+        self.slash_wheel_animating = False
+        self.slash_wheel_anim_angle = 0.0
+        self.slash_wheel_anim_done = False
+        self.slash_wheel_anim_start = False
+        self.slashwheel_spin_stopped_angle = None
+        self.slash_scale = int(self.box_side * 1.5)
+        self.frame_counter = 0
+        # Ensure spinslash sound effect is loaded
+        self.spinslash_sfx = pygame.mixer.Sound(os.path.join(self.base_dir, 'sprites', 'sound_effects', 'spinslash.wav'))
+        # Add slash state sequence for the slash wheel phase
+        self.slashwheel_slash_states = ['0', '1', 'trail']
+        # Initialize SFX played flag for slash wheel
+        self.slashwheel_sfx_played = False
+        # Load slash wheel sprites
+        slashwheel_dir = os.path.join(self.base_dir, 'sprites', 'spr_rk_slashwheel')
+        self.slashwheel_img_0 = pygame.image.load(os.path.join(slashwheel_dir, 'spr_rk_slashwheel_0.png')).convert_alpha()
+        self.slashwheel_img_1 = pygame.image.load(os.path.join(slashwheel_dir, 'spr_rk_slashwheel_1.png')).convert_alpha()
+        self.slashwheel_img_trail = pygame.image.load(os.path.join(slashwheel_dir, 'spr_rk_slashwheel_trail.png')).convert_alpha()
+        # Set scale for slash wheel sprites
+        self.slashwheel_scale_w = int(self.battle_box_rect.width * 2.82) # (multiplied by square root of 8, which is the length of the diagonal of the battle box)
+        self.slashwheel_scale_h = max(8, int(self.battle_box_rect.width // 6))
+        # For the trail: very thin, very tall
+        self.slashwheel_trail_w = max(2, int(self.battle_box_rect.width // 50))
+        self.slashwheel_trail_h = int(self.battle_box_rect.width * 2.82)
+
+    def run(self):
+        # Part 1: Attack9 logic (reuse Attack5)
+        self.attack9 = Attack5(
+            self.screen, self.bg_img, self.fountain_scaled_frames, self.fountain_frame_idx,
+            self.kris_idle_frames, self.kris_frame_idx, self.kris_rect,
+            self.susie_idle_frames, self.susie_frame_idx, self.susie_rect,
+            self.ralsei_idle_frames, self.ralsei_frame_idx, self.ralsei_rect,
+            self.battle_box_rect, self.battle_box_color, self.battle_box_border_color, self.battle_box_border,
+            self.heart_img_0, self.heart_img_1, self.player_x, self.player_y, self.heart_size, self.font, self.player_lives, self.invincible,
+            self.knight_idle_img, self.show_knight_idle, self.clock,
+            base_dir=self.base_dir, player_speed=self.player_speed,
+            sequences=[
+                ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+                ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+                ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+                ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png'),
+                ('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png')
+            ]
+        )
+        self.attack9.run()
+        self.player_lives = self.attack9.player_lives
+        # Part 2: Slash Wheel
+        self.state = 'slash_wheel'
+        self.run_slash_wheel()
+
+    def run_slash_wheel(self):
+        # Wait for the spin to finish, then start the slash sequence
+        running = True
+        self.flurry_anim_timer = 0
+        self.flurry_frame_idx = 0
+        self.wheel_angle = 0.0
+        self.spin_speed = 400
+        self.wheel_angle_total = 0.0
+        self.slashwheel_state = 'spin'
+        self.slashwheel_spin_stopped_angle = None
+        self.slashwheel_slashes = []
+        self.slashwheel_trails = []
+        self.slashwheel_current_index = 0
+        self.slashwheel_slash_state_idx = 0
+        self.slashwheel_slash_start_time = 0
+        self.slashwheel_prev_slash = None
+        self.slashwheel_prev_trail_time = 0
+        spin_end_angle = 360 * 2
+        frame_counter = 0
+        self.slashwheel_slash_start_frame = frame_counter  # Initialize before loop
+        self.last_slash_sound_played = (-1, -1)  # (slash_index, state_idx) for sound effect logic
+        while running:
+            dt = self.clock.tick(60)
+            now = pygame.time.get_ticks()
+            frame_counter += 1
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                    pygame.quit()
+                    sys.exit()
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_LEFT]:
+                self.player_x -= self.player_speed
+            if keys[pygame.K_RIGHT]:
+                self.player_x += self.player_speed
+            if keys[pygame.K_UP]:
+                self.player_y -= self.player_speed
+            if keys[pygame.K_DOWN]:
+                self.player_y += self.player_speed
+            playable_rect = self.battle_box_rect.inflate(-2 * self.battle_box_border, -2 * self.battle_box_border)
+            self.player_x = max(playable_rect.left, min(self.player_x, playable_rect.right - self.heart_size))
+            self.player_y = max(playable_rect.top, min(self.player_y, playable_rect.bottom - self.heart_size))
+            self.flurry_anim_timer += 1
+            if self.flurry_anim_timer >= self.flurry_anim_speed:
+                self.flurry_frame_idx = (self.flurry_frame_idx + 1) % len(self.flurry_frames)
+                self.flurry_anim_timer = 0
+            # --- Collision logic for slash wheel phase ---
+            if self.slashwheel_state == 'slash':
+                # Only check collision during the '1' (active) state
+                if self.slashwheel_current_index < self.slash_wheel_max_slashes:
+                    angle = (self.slashwheel_spin_stopped_angle + self.slashwheel_current_index * self.slash_wheel_angle_step) % 360
+                    state = self.slashwheel_slash_states[self.slashwheel_slash_state_idx]
+                    if state == '1':
+                        # Get the slash image and transform it as in _draw_slashwheel_colored
+                        img = self.slashwheel_img_1
+                        scaled = pygame.transform.smoothscale(img, (self.slashwheel_scale_w, self.slashwheel_scale_h))
+                        rotated = pygame.transform.rotate(scaled, angle)
+                        rect = rotated.get_rect(center=self.battle_box_rect.center)
+                        player_rect = pygame.Rect(self.player_x, self.player_y, self.heart_size, self.heart_size)
+                        player_center = (self.player_x + self.heart_size // 2, self.player_y + self.heart_size // 2)
+                        # Only check if player is not invincible
+                        if now > getattr(self, 'invincible_until', 0):
+                            if player_rect.colliderect(rect):
+                                # Sample points in the player rect for pixel-perfect alpha check
+                                hit_detected = False
+                                sample_points = [
+                                    (player_center[0], player_center[1]),
+                                    (player_rect.left + 5, player_rect.top + 5),
+                                    (player_rect.right - 5, player_rect.top + 5),
+                                    (player_rect.left + 5, player_rect.bottom - 5),
+                                    (player_rect.right - 5, player_rect.bottom - 5)
+                                ]
+                                for px, py in sample_points:
+                                    rel_x = px - rect.left
+                                    rel_y = py - rect.top
+                                    if (0 <= rel_x < rotated.get_width() and 0 <= rel_y < rotated.get_height()):
+                                        try:
+                                            pixel_alpha = rotated.get_at((int(rel_x), int(rel_y)))[3]
+                                            if pixel_alpha > 100:
+                                                hit_detected = True
+                                                break
+                                        except (IndexError, ValueError):
+                                            continue
+                                if hit_detected:
+                                    self.player_lives = max(0, self.player_lives - 1)
+                                    self.invincible_until = now + 1000  # 1 second invincibility
+                                    self.invincible = True
+            if self.slashwheel_state == 'spin':
+                self.wheel_angle_total += self.spin_speed * dt / 1000.0
+                self.wheel_angle = self.wheel_angle_total % 360
+                self.draw_slashwheel(now, spinning=True)
+                if self.wheel_angle_total >= spin_end_angle:
+                    self.slashwheel_state = 'slash'
+                    self.slashwheel_spin_stopped_angle = self.wheel_angle % 360
+                    self.slashwheel_slash_start_time = now
+                    self.slashwheel_current_index = 0
+                    self.slashwheel_slash_state_idx = 0
+                    self.slashwheel_prev_slash = None
+                    self.slashwheel_prev_trail_time = 0
+            elif self.slashwheel_state == 'slash':
+                # State machine for each slash
+                if self.slashwheel_current_index >= self.slash_wheel_max_slashes and not self.slashwheel_trails:
+                    self.slashwheel_state = 'done'
+                    continue
+                # Handle trail expiration
+                self.slashwheel_trails = [(a, f) for (a, f) in self.slashwheel_trails if now - f < 1]
+                # Handle new slash
+                if self.slashwheel_current_index < self.slash_wheel_max_slashes:
+                    angle = (self.slashwheel_spin_stopped_angle + self.slashwheel_current_index * self.slash_wheel_angle_step) % 360
+                    state = self.slashwheel_slash_states[self.slashwheel_slash_state_idx]
+                    if state == '0':
+                        self.draw_slashwheel(now, spinning=False, slash_angle=angle, slash_state='0', prev_trail=self.slashwheel_prev_slash)
+                        if self.slashwheel_slash_state_idx_timer(frame_counter):
+                            self.slashwheel_slash_state_idx = 1
+                            self.slashwheel_slash_start_frame = frame_counter
+                    elif state == '1':
+                        self.draw_slashwheel(now, spinning=False, slash_angle=angle, slash_state='1', prev_trail=self.slashwheel_prev_slash)
+                        if self.slashwheel_slash_state_idx_timer(frame_counter):
+                            self.slashwheel_slash_state_idx = 2
+                            self.slashwheel_slash_start_frame = frame_counter
+                    elif state == 'trail':
+                        if self.slashwheel_prev_slash is not None:
+                            self.slashwheel_trails.append((self.slashwheel_prev_slash, frame_counter))
+                        self.draw_slashwheel(now, spinning=False, slash_angle=angle, slash_state='trail', prev_trail=None)
+                        if self.slashwheel_slash_state_idx_timer(frame_counter):
+                            self.slashwheel_current_index += 1
+                            self.slashwheel_slash_state_idx = 0
+                            self.slashwheel_slash_start_frame = frame_counter
+                            self.slashwheel_prev_slash = angle
+                            if self.play_slashwheel_sfx_cycle == 0:
+                                self.spinslash_sfx.play()
+                                self.play_slashwheel_sfx_cycle += 1
+                            if self.play_slashwheel_sfx_cycle >= 3:
+                                self.play_slashwheel_sfx_cycle = 0
+                            else:
+                                self.play_slashwheel_sfx_cycle += 1
+                else:
+                    self.draw_slashwheel(now, spinning=False, slash_angle=None, slash_state=None, prev_trail=None)
+            elif self.slashwheel_state == 'done':
+                running = False
+
+    def slashwheel_slash_state_idx_timer(self, frame_counter):
+        # Returns True if 1 frame has passed since last state change
+        return frame_counter - getattr(self, 'slashwheel_slash_start_frame', 0) >= 1
+
+    def draw_slashwheel(self, now, spinning=False, slash_angle=None, slash_state=None, prev_trail=None):
+        draw_main_scene(
+            self.screen, self.bg_img, self.fountain_scaled_frames, self.fountain_frame_idx,
+            self.kris_idle_frames, self.kris_frame_idx, self.kris_rect,
+            self.susie_idle_frames, self.susie_frame_idx, self.susie_rect,
+            self.ralsei_idle_frames, self.ralsei_frame_idx, self.ralsei_rect,
+            self.battle_box_rect, self.battle_box_color, self.battle_box_border_color, self.battle_box_border,
+            self.heart_img_0, self.heart_img_1, self.player_x, self.player_y, self.heart_size, self.font, self.player_lives, pygame.time.get_ticks() < getattr(self, 'invincible_until', 0),
+            None, False, self.clock
+        )
+        flurry_img = self.flurry_frames[self.flurry_frame_idx]
+        knight_rect = flurry_img.get_rect()
+        knight_rect.left = self.battle_box_rect.right + 40
+        knight_rect.centery = self.kris_rect.centery + 20
+        # --- Knight sprite trail logic ---
+        self.knight_trail.insert(0, (flurry_img.copy(), knight_rect.copy()))
+        if len(self.knight_trail) > self.trail_length:
+            self.knight_trail.pop()
+        for i, (img, rect) in enumerate(reversed(self.knight_trail)):
+            if i >= len(self.trail_alphas):
+                break
+            img = img.copy()
+            img.set_alpha(self.trail_alphas[i])
+            rect = rect.copy()
+            rect.left += 40 + i * 10
+            self.screen.blit(img, rect)
+        # Draw the main knight sprite
+        self.screen.blit(flurry_img, knight_rect)
+        # Draw spinning phase
+        if spinning:
+            orig_slash_w, orig_slash_h = self.spinslash_img.get_width(), self.spinslash_img.get_height()
+            new_slash_w = int(self.battle_box_rect.width * 1.5)
+            scale_factor = new_slash_w / orig_slash_w
+            new_slash_h = int(orig_slash_h * scale_factor)
+            scaled_slash = pygame.transform.smoothscale(self.spinslash_img, (new_slash_w, new_slash_h))
+            rotated_slash = pygame.transform.rotate(scaled_slash, self.wheel_angle)
+            slash_rect = rotated_slash.get_rect(center=self.battle_box_rect.center)
+            prev_clip = self.screen.get_clip()
+            self.screen.set_clip(self.battle_box_rect)
+            self.screen.blit(rotated_slash, slash_rect)
+            self.screen.set_clip(prev_clip)
+            pygame.draw.rect(self.screen, self.battle_box_border_color, self.battle_box_rect, self.battle_box_border)
+        else:
+            # Draw all active trails
+            for angle, f in self.slashwheel_trails:
+                self._draw_slashwheel_trail(angle)
+            # Draw current slash
+            if slash_angle is not None and slash_state is not None:
+                if slash_state == '0':
+                    self._draw_slashwheel_colored(slash_angle, self.slashwheel_img_0)
+                elif slash_state == '1':
+                    self._draw_slashwheel_colored(slash_angle, self.slashwheel_img_1)
+                elif slash_state == 'trail':
+                    self._draw_slashwheel_trail(slash_angle)
+        pygame.display.flip()
+
+    def _draw_slashwheel_colored(self, angle, img):
+        # Scale and rotate
+        scaled = pygame.transform.smoothscale(img, (self.slashwheel_scale_w, self.slashwheel_scale_h))
+        rotated = pygame.transform.rotate(scaled, angle)
+        rect = rotated.get_rect(center=self.battle_box_rect.center)
+        # Draw outside the box as normal
+        self.screen.blit(rotated, rect)
+        # Recolor inside the box using a temporary surface for the battle box
+        box = self.battle_box_rect
+        temp_surf = pygame.Surface((box.width, box.height), pygame.SRCALPHA)
+        temp_surf.blit(rotated, (-(box.left - rect.left), -(box.top - rect.top)))
+        # Fast recolor using surfarray (only for non-transparent pixels)
+        arr = pygame.surfarray.pixels3d(temp_surf)
+        alpha = pygame.surfarray.pixels_alpha(temp_surf)
+        arr[(alpha > 0)] = (252, 84, 92)
+        del arr
+        del alpha
+        self.screen.blit(temp_surf, box.topleft)
+
+    def _draw_slashwheel_trail(self, angle):
+        # Scale and rotate the trail to be long and thin in the same direction as the main slashes
+        scaled = pygame.transform.smoothscale(self.slashwheel_img_trail, (self.slashwheel_trail_h, self.slashwheel_trail_w))
+        rotated = pygame.transform.rotate(scaled, angle)
+        rect = rotated.get_rect(center=self.battle_box_rect.center)
+        # Only draw inside the box using a temporary surface
+        box = self.battle_box_rect
+        temp_surf = pygame.Surface((box.width, box.height), pygame.SRCALPHA)
+        temp_surf.blit(rotated, (-(box.left - rect.left), -(box.top - rect.top)))
+        self.screen.blit(temp_surf, box.topleft)
+
+    def is_done(self):
+        return self.state == 'done'
+
+
+def make_attack_for_debug(attack_name):
+    """
+    Helper for debugging: returns a ready-to-run attack instance for the given attack_name (e.g., 'Attack1').
+    Sets up a minimal environment and loads all required assets.
+    """
+    import pygame
+    import os
+    import sys
+    import random
+    pygame.init()
+    screen_width, screen_height = 1280, 720
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bg_path = os.path.join(base_dir, 'sprites', 'spr_knight_snow_bg.png')
+    bg_img = pygame.image.load(bg_path).convert()
+    bg_img = pygame.transform.scale(bg_img, (screen_width, screen_height))
+    # Fountain
+    fountain_dir = os.path.join(base_dir, 'sprites', 'spr_fountainbg')
+    fountain_files = [os.path.join(fountain_dir, f'spr_cc_fountainbg_{i}.png') for i in range(4)]
+    fountain_frames = [pygame.image.load(f).convert_alpha() for f in fountain_files]
+    fountain_width = 600
+    orig_w, orig_h = fountain_frames[0].get_width(), fountain_frames[0].get_height()
+    scale_factor = fountain_width / orig_w
+    fountain_scaled_frames = [pygame.transform.smoothscale(frame, (fountain_width, int(orig_h * scale_factor))) for frame in fountain_frames]
+    fountain_frame_idx = 0
+    # Kris
+    kris_idle_dir = os.path.join(base_dir, 'sprites', 'spr_krisb_idle')
+    kris_idle_files = sorted([os.path.join(kris_idle_dir, f) for f in os.listdir(kris_idle_dir) if f.lower().endswith('.png')])
+    kris_base_img = pygame.image.load(kris_idle_files[0]).convert_alpha()
+    kris_target_size = (kris_base_img.get_width() * 3, kris_base_img.get_height() * 3)
+    kris_idle_frames = [pygame.transform.smoothscale(pygame.image.load(f).convert_alpha(), kris_target_size) for f in kris_idle_files]
+    kris_frame_idx = 0
+    kris_rect = kris_idle_frames[0].get_rect()
+    kris_rect.left = 350
+    kris_rect.centery = screen_height // 2 - 100
+    # Susie
+    susie_idle_dir = os.path.join(base_dir, 'sprites', 'spr_susieb_idle')
+    susie_idle_files = sorted([os.path.join(susie_idle_dir, f) for f in os.listdir(susie_idle_dir) if f.lower().endswith('.png')])
+    susie_base_img = pygame.image.load(susie_idle_files[0]).convert_alpha()
+    susie_target_size = (susie_base_img.get_width() * 3, susie_base_img.get_height() * 3)
+    susie_idle_frames = [pygame.transform.smoothscale(pygame.image.load(f).convert_alpha(), susie_target_size) for f in susie_idle_files]
+    susie_frame_idx = 0
+    susie_rect = susie_idle_frames[0].get_rect()
+    susie_rect.left = kris_rect.left - 120
+    susie_rect.centery = kris_rect.centery + 100
+    # Ralsei
+    ralsei_idle_dir = os.path.join(base_dir, 'sprites', 'spr_ralsei_idle')
+    ralsei_idle_files = sorted([os.path.join(ralsei_idle_dir, f) for f in os.listdir(ralsei_idle_dir) if f.lower().endswith('.png')])
+    ralsei_idle_orig = pygame.image.load(ralsei_idle_files[0]).convert_alpha()
+    ralsei_target_size = (int(ralsei_idle_orig.get_width() * 3), int(ralsei_idle_orig.get_height() * 3))
+    ralsei_idle_frames = [pygame.transform.smoothscale(pygame.image.load(f).convert_alpha(), ralsei_target_size) for f in ralsei_idle_files]
+    ralsei_frame_idx = 0
+    ralsei_rect = ralsei_idle_frames[0].get_rect()
+    ralsei_rect.left = susie_rect.left - 10
+    ralsei_rect.centery = susie_rect.centery + 100
+    # Battle box
+    battle_box_width = 450
+    battle_box_height = 300
+    battle_box_border = 4
+    battle_box_color = (0, 0, 0)
+    battle_box_border_color = (0, 255, 0)
+    battle_box_rect = pygame.Rect((screen_width - battle_box_width) // 2 + 50, (screen_height - battle_box_height) // 2 + 20, battle_box_width, battle_box_height)
+    # Heart
+    heart_size = 32
+    heart_img_0 = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_heart', 'spr_heart_0.png')).convert_alpha()
+    heart_img_0 = pygame.transform.smoothscale(heart_img_0, (heart_size, heart_size))
+    heart_img_1 = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_heart', 'spr_heart_1.png')).convert_alpha()
+    heart_img_1 = pygame.transform.smoothscale(heart_img_1, (heart_size, heart_size))
+    # Knight idle
+    knight_idle_img = pygame.image.load(os.path.join(base_dir, 'sprites', 'spr_roaringknight_idle.png')).convert_alpha()
+    knight_idle_img = pygame.transform.smoothscale(knight_idle_img, (int(knight_idle_img.get_width() * 3), int(knight_idle_img.get_height() * 3)))
+    # Player
+    player_x = battle_box_rect.left + battle_box_width // 2 - heart_size // 2
+    player_y = battle_box_rect.top + battle_box_height // 2 - heart_size // 2
+    player_lives = 99
+    font = pygame.font.SysFont(None, 48)
+    clock = pygame.time.Clock()
+    invincible = False
+    show_knight_idle = True
+    knight_trail = []
+    trail_length = 10
+    trail_alphas = [80, 70, 60, 50, 40, 30, 20, 15, 10, 5]
+    player_speed = 5
+    # For attacks that need PreAttack1
+    knight_point_img = knight_idle_img
+    knight_point_rect = knight_idle_img.get_rect()
+    knight_point_frames = [knight_idle_img]
+    triangle_knight_img = knight_idle_img
+    triangle_knight_rect = knight_idle_img.get_rect()
+    triangle_start_time = pygame.time.get_ticks()
+    knight_reverse_duration = 500
+    invincible_until = 0
+    # For Attack1/6
+    knight_point_trail = []
+    # For Attack2/8
+    base_dir = base_dir
+    # For Attack3/7
+    # For Attack5/9/10
+    # Now, select and return the attack instance
+    if attack_name == 'Attack1':
+        return Attack1(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+            knight_point_img, knight_point_rect, knight_point_frames,
+            clock, player_speed,
+            screen_height, base_dir, knight_point_trail,
+            16, 4, 8, len(kris_idle_frames), 8, len(susie_idle_frames), 8, len(ralsei_idle_frames),
+            0, 0, 0, 0, invincible_until, triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img)
+    elif attack_name == 'Attack2':
+        return Attack2(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+            clock, player_speed, base_dir, knight_idle_img)
+    elif attack_name == 'Attack3':
+        return Attack3(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            knight_trail, trail_length, trail_alphas)
+    elif attack_name == 'Attack4':
+        return Attack4(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            base_dir=base_dir, player_speed=player_speed)
+    elif attack_name == 'Attack5':
+        return Attack5(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            base_dir=base_dir, player_speed=player_speed)
+    elif attack_name == 'Attack6':
+        return Attack1(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+            knight_point_img, knight_point_rect, knight_point_frames,
+            clock, player_speed,
+            screen_height, base_dir, knight_point_trail,
+            16, 4, 8, len(kris_idle_frames), 8, len(susie_idle_frames), 8, len(ralsei_idle_frames),
+            0, 0, 0, 0, invincible_until, triangle_start_time, triangle_knight_img, triangle_knight_rect, knight_reverse_duration, knight_idle_img, starchild_scale=1.2)
+    elif attack_name == 'Attack7':
+        return Attack7(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            knight_trail, trail_length, trail_alphas)
+    elif attack_name == 'Attack8':
+        return Attack8(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives,
+            clock, 5, base_dir, knight_idle_img, show_wheel=True)
+    elif attack_name == 'Attack9':
+        return Attack5(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            base_dir=base_dir, player_speed=player_speed,
+            sequences=[('spr_rk_spinslash4_red.png', 'spr_rk_spinslash4.png')]*5)
+    elif attack_name == 'Attack10':
+        return Attack10(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            base_dir=base_dir, player_speed=player_speed)
+    else:
+        raise ValueError(f"Unknown attack name: {attack_name}")
+
 
 if __name__ == "__main__":
     main()
