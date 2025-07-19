@@ -2,7 +2,7 @@
 from game import make_attack_for_debug
 
 # Choose which attack to debug here:
-ATTACK_NAME = 'Attack10' 
+ATTACK_NAME = 'Final' 
 
 if __name__ == '__main__':
     attack = make_attack_for_debug(ATTACK_NAME)

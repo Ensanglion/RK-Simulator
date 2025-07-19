@@ -644,11 +644,25 @@ def main():
     attack10.run()
     player_lives = attack10.player_lives
 
+    # --- Final Attack Sequence ---
+    final_attack = FinalAttackSequence(
+        screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+        kris_idle_frames, kris_frame_idx, kris_rect,
+        susie_idle_frames, susie_frame_idx, susie_rect,
+        ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+        battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+        heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+        knight_idle_img, show_knight_idle, clock,
+        base_dir=base_dir, player_speed=player_speed
+    )
+    final_attack.run()
+
     pygame.quit()
     sys.exit()
 
+
+
 def play_battle_intro(screen, bg_img, fountain_scaled_frames, fountain_frame_idx, kris_idle_frames, kris_rect, susie_idle_frames, susie_rect, ralsei_idle_frames, ralsei_rect, battle_box_rect, base_dir, kris_target_size, susie_target_size, ralsei_target_size, kris_frame_idx, susie_frame_idx, ralsei_frame_idx, battle_box_color, battle_box_border_color, battle_box_border, heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, fountain_anim_speed, fountain_frame_count, kris_anim_speed, kris_frame_count, susie_anim_speed, susie_frame_count, ralsei_anim_speed, ralsei_frame_count, fountain_anim_timer, kris_anim_timer, susie_anim_timer, ralsei_anim_timer):
-    import time
     # Load intro animations
     def load_anim(folder, numeric_sort=False):
         files = [
@@ -1993,7 +2007,6 @@ class Attack2:
         self.ralsei_anim_timer = 0
     
     def load_assets(self):
-        import math, random
         # Load sword sprites
         self.sword_imgs = {
             'up': pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_knight_sword', 'spr_knight_sword_up.png')).convert_alpha(),
@@ -2300,7 +2313,6 @@ class Attack2:
         )
         
         # --- Knight idle animation and trail (added for Attack2) ---
-        import math
         float_offset = int(20 * math.sin(pygame.time.get_ticks() / 267))
         knight_idle_rect = self.knight_idle_img.get_rect()
         knight_idle_rect.centery = self.kris_rect.centery + 20
@@ -3836,15 +3848,423 @@ class Attack10:
         return self.state == 'done'
 
 
+class FinalAttackSequence:
+    def __init__(self, screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+                 kris_idle_frames, kris_frame_idx, kris_rect,
+                 susie_idle_frames, susie_frame_idx, susie_rect,
+                 ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+                 battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+                 heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+                 knight_idle_img, show_knight_idle, clock,
+                 base_dir=None, player_speed=2):
+        self.screen = screen
+        self.bg_img = bg_img
+        self.fountain_scaled_frames = fountain_scaled_frames
+        self.fountain_frame_idx = fountain_frame_idx
+        self.kris_idle_frames = kris_idle_frames
+        self.kris_frame_idx = kris_frame_idx
+        self.kris_rect = kris_rect
+        self.susie_idle_frames = susie_idle_frames
+        self.susie_frame_idx = susie_frame_idx
+        self.susie_rect = susie_rect
+        self.ralsei_idle_frames = ralsei_idle_frames
+        self.ralsei_frame_idx = ralsei_frame_idx
+        self.ralsei_rect = ralsei_rect
+        self.battle_box_rect = battle_box_rect.copy()
+        self.battle_box_color = battle_box_color
+        self.battle_box_border_color = battle_box_border_color
+        self.battle_box_border = battle_box_border
+        self.heart_img_0 = heart_img_0
+        self.heart_img_1 = heart_img_1
+        self.player_x = player_x
+        self.player_y = player_y
+        self.heart_size = heart_size
+        self.font = font
+        self.player_lives = player_lives
+        self.invincible = invincible
+        self.knight_idle_img = knight_idle_img
+        self.show_knight_idle = show_knight_idle
+        self.clock = clock
+        self.base_dir = base_dir
+        self.player_speed = player_speed
+        self.state = 0  # 0: expanding box, 1: knight aura, 2: phase 1, 3: phase 2, ...
+        self.timer = 0
+        self.box_expand_duration = 2000  # ms
+        self.box_fade_duration = 2000  # ms
+        self.box_expanded = False
+        self.box_alpha = 255
+        self.box_scale = 1.0
+        self.box_target_scale = 2.0
+        self.box_center = self.battle_box_rect.center
+        self.screen_rect = self.screen.get_rect()
+        # Load knight and glow sprites
+        self.knight_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_front_slash', 'spr_roaringknight_front_slash_0.png')).convert_alpha()
+        self.knight_glow_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_front_slash', 'spr_roaringknight_front_slash_glow.png')).convert_alpha()
+        self.knight_pos = (self.screen_rect.centerx, self.screen_rect.centery - 100)
+        self.knight_glow_layers = 3
+        self.knight_glow_scales = [1.5, 2.0, 2.5]
+        self.knight_glow_alphas = [100, 60, 30]
+        self.phase1_started = False
+        self.phase2_started = False
+        # For later phases
+        self.phase1_timer = 0
+        self.phase2_timer = 0
+        self.phase1_duration = 5000  # ms
+        self.phase2_duration = 5000  # ms
+        # Placeholder for stars
+        self.stars = []
+        self.spiral_stars = []
+        # Phase 1 (star attack) setup
+        self.star_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_knight_bullet_star', 'spr_knight_bullet_star_0.png')).convert_alpha()
+        self.last_star_spawn = 0
+        self.star_spawn_interval = 250  # ms between spawns
+        self.star_scale = 4.0  # 400%
+        self.spiral_star_scale = 2.5 # 250%
+        self.min_star_scale = 1.2  # Minimum scale for stars
+        self.star_duration = 1200  # ms, faster star movement
+        self.phase1_duration = 4000  # ms
+        self.phase2_duration = 5000  # ms  # Placeholder for phase 2 duration
+        self.phase1_timer = 0
+        self.stars = []
+        # Load star absorb sound effect
+        self.absorb_sfx = pygame.mixer.Sound(os.path.join(self.base_dir, 'sprites', 'sound_effects', 'spr_knight_absorb_stars.wav'))
+        self.absorb_sfx_played = False
+
+    def run(self):
+        running = True
+        clock = self.clock or __import__('pygame').time.Clock()
+        start_time = __import__('pygame').time.get_ticks()
+        self.aura_anim_timer = 0  # For animated aura
+        phase1_start_time = None
+        phase2_start_time = None
+        blacked_out = False
+        while running:
+            dt = clock.tick(60)
+            now = __import__('pygame').time.get_ticks() - start_time
+            self.aura_anim_timer += dt
+            for event in __import__('pygame').event.get():
+                if event.type == __import__('pygame').QUIT:
+                    running = False
+            # Handle player input (movement) during attack phases (every frame, not just on events)
+            if self.state >= 1:
+                keys = pygame.key.get_pressed()
+                speed = self.player_speed
+                if keys[pygame.K_LEFT]:
+                    self.player_x -= speed
+                if keys[pygame.K_RIGHT]:
+                    self.player_x += speed
+                if keys[pygame.K_UP]:
+                    self.player_y -= speed
+                if keys[pygame.K_DOWN]:
+                    self.player_y += speed
+                    # Clamp to screen bounds
+                    self.player_x = max(0, min(self.player_x, self.screen_rect.width - self.heart_size))
+                    self.player_y = max(0, min(self.player_y, self.screen_rect.height - self.heart_size))
+            # Fade out background in sync with box
+            if self.state == 0:
+                progress = min(1.0, now / self.box_expand_duration)
+                self.box_scale = 1.0 + (self.box_target_scale - 1.0) * progress
+                self.box_alpha = int(255 * (1.0 - progress))
+                self.bg_alpha = self.box_alpha  # Sync bg fade with box
+                self.draw_fading_bg()
+                self.draw_expanding_box()
+                self.draw_heart()
+                if progress >= 1.0:
+                    # Erase everything and fill black before continuing
+                    self.screen.fill((0, 0, 0))
+                    __import__('pygame').display.flip()
+                    blacked_out = True
+                    self.state = 1
+                    self.timer = now
+                    continue  # Skip the rest of this frame to ensure black fill
+            elif self.state == 1:
+                # Knight fade in and drift down
+                knight_fade_time = 1000  # ms
+                knight_progress = min(1.0, (now - self.timer) / knight_fade_time)
+                if blacked_out:
+                    self.screen.fill((0, 0, 0))
+                else:
+                    self.draw_fading_bg(final=True)
+                self.draw_knight_with_aura(fade=knight_progress)
+                self.draw_heart()
+                if knight_progress >= 1.0:
+                    self.state = 2  # Ready for phase 1
+            elif self.state == 2:
+                # PHASE 1: Stars spawn and move toward knight
+                if phase1_start_time is None:
+                    phase1_start_time = now
+                    # Play absorb sound effect once for the duration of phase 1 + phase 2
+                    if not self.absorb_sfx_played:
+                        total_duration = self.phase1_duration + self.phase2_duration
+                        self.absorb_sfx.play(maxtime=total_duration)
+                        self.absorb_sfx_played = True
+                self.draw_fading_bg(final=True)
+                self.draw_knight_with_aura(fade=1.0)
+                self.draw_heart()
+                # Spawn stars at random perimeter points
+                if now - self.last_star_spawn > self.star_spawn_interval and now - phase1_start_time < self.phase1_duration:
+                    import random, math
+                    w, h = self.screen_rect.width, self.screen_rect.height
+                    edge = random.choice(['top','bottom','left','right'])
+                    if edge == 'top':
+                        x = random.randint(0, w)
+                        y = 0
+                    elif edge == 'bottom':
+                        x = random.randint(0, w)
+                        y = h
+                    elif edge == 'left':
+                        x = 0
+                        y = random.randint(0, h)
+                    else:
+                        x = w
+                        y = random.randint(0, h)
+                    start_pos = (x, y)
+                    end_pos = self.knight_pos
+                    # Curve offset: pick a control point between start and end, offset by up to 200px
+                    mx, my = (x + end_pos[0]) / 2, (y + end_pos[1]) / 2
+                    offset_angle = random.uniform(0, 2*math.pi)
+                    offset_radius = random.uniform(80, 200)
+                    cx = mx + offset_radius * math.cos(offset_angle)
+                    cy = my + offset_radius * math.sin(offset_angle)
+                    star = self.Star(self.star_img, start_pos, end_pos, (cx, cy), self.star_scale, self.min_star_scale, self.star_duration)
+                    self.stars.append(star)
+                    self.last_star_spawn = now
+                # Update and draw stars
+                for star in self.stars:
+                    star.update(__import__('pygame').time.get_ticks())
+                    star.draw(self.screen)
+                # Remove finished stars
+                self.stars = [s for s in self.stars if not s.done]
+                if now - phase1_start_time > self.phase1_duration:
+                    self.state = 3  # Next phase
+            elif self.state == 3:
+                # PHASE 2: Spiral stars
+                if phase2_start_time is None:
+                    phase2_start_time = now
+                    self.spiral_stars_spawned = False
+                    self.spiral_star_objects = []
+                    # Precompute spiral star spawn points and times
+                    w, h = self.screen_rect.width, self.screen_rect.height
+                    knight_pos = self.knight_pos
+                    sides = 6
+                    spiral_points = []
+                    # Spiral 1: bottom left, counter-clockwise
+                    spiral1 = []
+                    # Bottom (left to right)
+                    for i in range(sides):
+                        x = int(i * w / (sides - 1))
+                        y = h
+                        spiral1.append((x, y))
+                    # Right (bottom to top)
+                    for i in range(1, sides):
+                        x = w
+                        y = int(h - i * h / (sides - 1))
+                        spiral1.append((x, y))
+                    # Top (right to left)
+                    for i in range(1, sides):
+                        x = int(w - i * w / (sides - 1))
+                        y = 0
+                        spiral1.append((x, y))
+                    # Left (top to bottom)
+                    for i in range(1, sides-1):
+                        x = 0
+                        y = int(i * h / (sides - 1))
+                        spiral1.append((x, y))
+                    # Spiral 2: top right, counter-clockwise
+                    spiral2 = []
+                    # Top (right to left)
+                    for i in range(sides):
+                        x = int(w - i * w / (sides - 1))
+                        y = 0
+                        spiral2.append((x, y))
+                    # Left (top to bottom)
+                    for i in range(1, sides):
+                        x = 0
+                        y = int(i * h / (sides - 1))
+                        spiral2.append((x, y))
+                    # Bottom (left to right)
+                    for i in range(1, sides):
+                        x = int(i * w / (sides - 1))
+                        y = h
+                        spiral2.append((x, y))
+                    # Right (bottom to top)
+                    for i in range(1, sides-1):
+                        x = w
+                        y = int(h - i * h / (sides - 1))
+                        spiral2.append((x, y))
+                    spiral_points = spiral1 + spiral2
+                    total_spiral_stars = len(spiral_points)
+                    # Each star's spawn time is set so the last one reaches the knight at the end of phase2_duration
+                    for idx, start_pos in enumerate(spiral_points):
+                        # The time the star should reach the knight
+                        reach_time = phase2_start_time + self.phase2_duration
+                        # The time the star should spawn so it reaches the knight at reach_time
+                        # All stars have the same travel duration (star_duration)
+                        spawn_time = reach_time - self.star_duration - int((total_spiral_stars-1-idx) * self.phase2_duration / total_spiral_stars)
+                        self.spiral_star_objects.append({
+                            'spawn_time': spawn_time,
+                            'start_pos': start_pos,
+                            'active': False,
+                            'star': None
+                        })
+                    self.spiral_stars_spawned = True
+                # Draw phase 2
+                self.screen.fill((0, 0, 0))
+                self.draw_knight_with_aura(fade=1.0)
+                self.draw_heart()
+                # Spawn spiral stars at their scheduled times
+                now_abs = __import__('pygame').time.get_ticks()
+                for obj in self.spiral_star_objects:
+                    if not obj['active'] and now_abs >= obj['spawn_time']:
+                        obj['star'] = self.SpiralStar(self.star_img, obj['start_pos'], self.knight_pos, self.spiral_star_scale, self.min_star_scale, self.star_duration)
+                        obj['active'] = True
+                    if obj['active'] and obj['star'] is not None:
+                        obj['star'].update(now_abs)
+                        obj['star'].draw(self.screen)
+                # Remove finished spiral stars
+                for obj in self.spiral_star_objects:
+                    if obj['active'] and obj['star'] is not None and obj['star'].done:
+                        obj['active'] = False
+                        obj['star'] = None
+                if now - phase2_start_time > self.phase2_duration:
+                    self.state = 4  # Next phase
+            __import__('pygame').display.flip()
+
+    def draw_fading_bg(self, final=False):
+        # Fade out bg_img using alpha
+        bg = self.bg_img.copy()
+        alpha = self.bg_alpha if not final else 0
+        if alpha < 255:
+            fade_surf = pygame.Surface(bg.get_size(), pygame.SRCALPHA)
+            fade_surf.fill((0, 0, 0, 255 - alpha))
+            bg.blit(fade_surf, (0, 0))
+        self.screen.blit(bg, (0, 0))
+
+    def draw_knight_with_aura(self, fade=1.0):
+        # Animated, shrinking (inward) aura with 3 layers
+        scale_factor = 2.25  # Current size
+        drift_start = -30
+        drift_end = 0
+        drift = drift_start * (1 - fade) + drift_end * fade
+        alpha = int(255 * fade)
+        pos = (self.knight_pos[0], self.knight_pos[1] + drift)
+        # Aura animation parameters
+        aura_layers = 3
+        aura_cycle_ms = 1200  # How long for a full pulse
+        base_scale = 1.1 * scale_factor
+        max_scale = 2.0 * scale_factor
+        for i in range(aura_layers):
+            # Each layer is offset in phase
+            phase = (self.aura_anim_timer / aura_cycle_ms + i / aura_layers) % 1.0
+            # REVERSE: start large, shrink to small
+            scale = max_scale - (max_scale - base_scale) * phase
+            aura_alpha = int(90 * phase * fade)  # Fade in as it shrinks
+            glow = pygame.transform.smoothscale(self.knight_glow_img, (
+                int(self.knight_glow_img.get_width() * scale),
+                int(self.knight_glow_img.get_height() * scale)))
+            glow.set_alpha(aura_alpha)
+            glow_rect = glow.get_rect(center=pos)
+            self.screen.blit(glow, glow_rect)
+        # Draw knight
+        knight = pygame.transform.smoothscale(self.knight_img, (
+            int(self.knight_img.get_width() * scale_factor),
+            int(self.knight_img.get_height() * scale_factor)))
+        knight.set_alpha(alpha)
+        knight_rect = knight.get_rect(center=pos)
+        self.screen.blit(knight, knight_rect)
+
+    def draw_expanding_box(self):
+        # Calculate new rect
+        w = int(self.battle_box_rect.width * self.box_scale)
+        h = int(self.battle_box_rect.height * self.box_scale)
+        rect = pygame.Rect(0, 0, w, h)
+        rect.center = self.box_center
+        s = pygame.Surface((w, h), pygame.SRCALPHA)
+        s.fill((*self.battle_box_color, self.box_alpha))
+        self.screen.blit(s, rect)
+        # Optionally draw border
+        if self.box_alpha > 0:
+            border_s = pygame.Surface((w, h), pygame.SRCALPHA)
+            pygame.draw.rect(border_s, (*self.battle_box_border_color, self.box_alpha), border_s.get_rect(), self.battle_box_border)
+            self.screen.blit(border_s, rect)
+
+    def draw_heart(self):
+        heart_img = self.heart_img_0
+        heart_rect = heart_img.get_rect(center=(self.player_x, self.player_y))
+        self.screen.blit(heart_img, heart_rect)
+
+    class Star:
+        def __init__(self, img, start_pos, end_pos, curve_offset, star_scale, min_star_scale, duration=1200):
+            import pygame
+            self.img = img
+            self.start_pos = start_pos
+            self.end_pos = end_pos
+            self.curve_offset = curve_offset  # (cx, cy) for control point
+            self.spawn_time = pygame.time.get_ticks()
+            self.duration = duration
+            self.done = False
+            self.current_pos = start_pos
+            self.star_scale = star_scale
+            self.min_star_scale = min_star_scale
+            self.scale = star_scale
+        def update(self, now):
+            t = min(1.0, (now - self.spawn_time) / self.duration)
+            # Quadratic Bezier: B(t) = (1-t)^2*P0 + 2*(1-t)*t*C + t^2*P1
+            x0, y0 = self.start_pos
+            x1, y1 = self.end_pos
+            cx, cy = self.curve_offset
+            bx = (1-t)**2 * x0 + 2*(1-t)*t*cx + t**2 * x1
+            by = (1-t)**2 * y0 + 2*(1-t)*t*cy + t**2 * y1
+            self.current_pos = (bx, by)
+            self.scale = self.star_scale - (self.star_scale - self.min_star_scale) * t
+            if t >= 1.0:
+                self.done = True
+        def draw(self, screen):
+            import pygame
+            img = pygame.transform.smoothscale(self.img, (
+                int(self.img.get_width() * self.scale),
+                int(self.img.get_height() * self.scale)))
+            rect = img.get_rect(center=(int(self.current_pos[0]), int(self.current_pos[1])))
+            screen.blit(img, rect)
+
+    class SpiralStar:
+        def __init__(self, img, start_pos, end_pos, star_scale, min_star_scale, duration=1200):
+            import pygame
+            self.img = img
+            self.start_pos = start_pos
+            self.end_pos = end_pos
+            self.spawn_time = pygame.time.get_ticks()
+            self.duration = duration
+            self.done = False
+            self.current_pos = start_pos
+            self.star_scale = star_scale
+            self.min_star_scale = min_star_scale
+            self.scale = star_scale
+        def update(self, now):
+            t = min(1.0, (now - self.spawn_time) / self.duration)
+            # Linear interpolation
+            x0, y0 = self.start_pos
+            x1, y1 = self.end_pos
+            bx = x0 + (x1 - x0) * t
+            by = y0 + (y1 - y0) * t
+            self.current_pos = (bx, by)
+            self.scale = self.star_scale - (self.star_scale - self.min_star_scale) * t
+            if t >= 1.0:
+                self.done = True
+        def draw(self, screen):
+            import pygame
+            img = pygame.transform.smoothscale(self.img, (
+                int(self.img.get_width() * self.scale),
+                int(self.img.get_height() * self.scale)))
+            rect = img.get_rect(center=(int(self.current_pos[0]), int(self.current_pos[1])))
+            screen.blit(img, rect)
+
+
 def make_attack_for_debug(attack_name):
     """
     Helper for debugging: returns a ready-to-run attack instance for the given attack_name (e.g., 'Attack1').
     Sets up a minimal environment and loads all required assets.
     """
-    import pygame
-    import os
-    import sys
-    import random
     pygame.init()
     screen_width, screen_height = 1280, 720
     screen = pygame.display.set_mode((screen_width, screen_height))
@@ -3928,12 +4348,12 @@ def make_attack_for_debug(attack_name):
     triangle_start_time = pygame.time.get_ticks()
     knight_reverse_duration = 500
     invincible_until = 0
-    # For Attack1/6
+    # For Attacks 1, 6
     knight_point_trail = []
-    # For Attack2/8
+    # For Attack 2,8
     base_dir = base_dir
-    # For Attack3/7
-    # For Attack5/9/10
+    # For Attacks 3,7
+    # For Attacks 5,9,10
     # Now, select and return the attack instance
     if attack_name == 'Attack1':
         return Attack1(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
@@ -4030,6 +4450,15 @@ def make_attack_for_debug(attack_name):
             heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
             knight_idle_img, show_knight_idle, clock,
             base_dir=base_dir, player_speed=player_speed)
+    elif attack_name == 'Final':
+        return FinalAttackSequence(screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
+            kris_idle_frames, kris_frame_idx, kris_rect,
+            susie_idle_frames, susie_frame_idx, susie_rect,
+            ralsei_idle_frames, ralsei_frame_idx, ralsei_rect,
+            battle_box_rect, battle_box_color, battle_box_border_color, battle_box_border,
+            heart_img_0, heart_img_1, player_x, player_y, heart_size, font, player_lives, invincible,
+            knight_idle_img, show_knight_idle, clock,
+            base_dir=base_dir)
     else:
         raise ValueError(f"Unknown attack name: {attack_name}")
 
