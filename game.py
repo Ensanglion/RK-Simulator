@@ -4183,6 +4183,47 @@ class FinalAttackSequence:
         self.reverse_flourish_frames = None
         # Star return state
         self.stars_returning = False
+        # Final animation variables
+        self.screen_height = self.screen.get_height()
+        self.screen_width = self.screen.get_width()
+        self.state6_start_time = None
+        self.explosion_time_recorded = False
+        self.diagonal_slash_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_front_slash.png')).convert_alpha()
+        self.front_slash_knight_frames = [ 
+            pygame.image.load(f"sprites/spr_roaringknight_front_slash/spr_roaringknight_front_slash_{i}.png").convert_alpha() 
+            for i in range(6) 
+            ]
+        self.knight_trail_img = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_front_slash', 'spr_roaringknight_front_slash_5.png')).convert_alpha() # final frame of the slash animation
+        # Load raw
+        self.diagonal_slash_img_raw = pygame.image.load(os.path.join(self.base_dir, 'sprites', 'spr_front_slash.png')).convert_alpha()
+        # Scale it
+        self.target_height = self.screen_height * 2
+        self.scale_factor = self.target_height / self.diagonal_slash_img_raw.get_height()
+        self.target_width = int(self.diagonal_slash_img_raw.get_width() * self.scale_factor)
+        self.diagonal_slash_img = pygame.transform.smoothscale(self.diagonal_slash_img_raw, (self.target_width, self.target_height))
+        self.slash_duration = 500 # ms
+        front_slash_dir = os.path.join(self.base_dir, 'sprites', 'spr_roaringknight_front_slash')
+        front_slash_files = sorted([os.path.join(front_slash_dir, f) for f in os.listdir(front_slash_dir) if f.endswith('.png')])
+        
+        self.front_slash_frames = [
+            pygame.transform.smoothscale(pygame.image.load(f).convert_alpha(), target_size)
+            for f in front_slash_files
+        ]
+        self.front_slash_frame_idx = 0
+        self.front_slash_anim_timer = 0
+        self.front_slash_anim_speed = 200  # ms per frame
+        self.split_started = False
+        self.split_start_time = 0
+        self.split_offset = 0
+        self.pre_split_surface = None
+        self.knight_y = self.knight_pos[1]
+        self.knight_trail = []
+        self.trail_length = 13
+        self.trail_alphas = [80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20]
+        self.rise_start_time = 0
+        self.front_slash_anim_done = False
+
+        
 
     def run(self):
         running = True
@@ -4277,6 +4318,7 @@ class FinalAttackSequence:
                 self.draw_heart()
                 if knight_progress >= 1.0:
                     self.state = 2  # Ready for phase 1
+
             elif self.state == 2:
                 # PHASE 1: Stars spawn and move toward knight
                 if phase1_start_time is None:
@@ -4347,11 +4389,12 @@ class FinalAttackSequence:
                 # Remove finished stars
                 self.stars = [s for s in self.stars if not s.done]
                 # Handle hit and invincibility
-                if hit_this_frame:
+                if hit_this_frame and not invincible:
                     self.player_lives = max(0, self.player_lives - 1)
                     self.invincible_until = pygame.time.get_ticks() + 1000  # 1 second invincibility
                 if now - phase1_start_time > self.phase1_duration:
                     self.state = 3  # Next phase
+
             elif self.state == 3:
                 # PHASE 2: Spiral stars
                 if phase2_start_time is None:
@@ -4400,12 +4443,13 @@ class FinalAttackSequence:
                 # Remove finished spiral stars
                 self.active_spiral_stars = [s for s in self.active_spiral_stars if not s.done]
                 # Handle hit and invincibility
-                if hit_this_frame:
+                if hit_this_frame and not invincible:
                     self.player_lives = max(0, self.player_lives - 1)
                     self.invincible_until = pygame.time.get_ticks() + 1000  # 1 second invincibility
                 # End phase after last pair is spawned and all stars are done
                 if self.spiral_star_spawn_idx >= len(self.spiral_star_pairs) and not self.active_spiral_stars:
                     self.state = 4  # Next phase
+
             elif self.state == 4:
                 # Clear all stars
                 self.stars = []
@@ -4487,9 +4531,6 @@ class FinalAttackSequence:
                     heart_draw_img = self.heart_img_0
                 self.screen.blit(heart_draw_img, (self.player_x, self.player_y))
 
-                # Draw lives counter
-                lives_surf = self.font.render(f"LIVES: {self.player_lives}", True, (255, 255, 255))
-                self.screen.blit(lives_surf, (50, 50))
             elif self.state == 5:
                 self.screen.fill((0, 0, 0))
                 now_ticks = pygame.time.get_ticks()
@@ -4564,25 +4605,7 @@ class FinalAttackSequence:
                         self.roar_stars.append(star)
                         self.last_roar_star_spawn = now_ticks
                         self.roar_star_count += 1    
-                    
-                # Always update and draw all roar stars
-                for star in self.roar_stars:
-                    star.update(now_ticks)
-                    star.draw(self.screen)
-                # Remove finished stars
-                self.roar_stars = [s for s in self.roar_stars if not s.done]
-
-                # Only end the attack when both reverse flourish and all stars are done
-                if reverse_flourish_done and not self.roar_stars:
-                    running = False
-                    break
                 
-                # Draw roar animation only if not in reverse flourish
-                if not self.reverse_flourish_started:
-                    frame = ((now_ticks - self.roar_anim_start) // self.roar_anim_speed) % len(self.roar_frames)
-                    roar_img = self.roar_frames[frame]
-                    roar_rect = roar_img.get_rect(center=self.knight_pos)
-                    self.screen.blit(roar_img, roar_rect)
                 # Draw the heart (with invincibility flash)
                 invincible = hasattr(self, 'invincible_until') and pygame.time.get_ticks() < self.invincible_until
                 if invincible:
@@ -4592,8 +4615,146 @@ class FinalAttackSequence:
                         heart_draw_img = self.heart_img_1
                 else:
                     heart_draw_img = self.heart_img_0
+                # Always update and draw all roar stars
+                for star in self.roar_stars:
+                    star.update(now_ticks)
+                    star.draw(self.screen)
+                # Remove finished stars
+                self.roar_stars = [s for s in self.roar_stars if not s.done]
+                # Heart rect for collision (scaled image assumed)
+                hit_this_frame = False
+                heart_rect = heart_draw_img.get_rect(topleft=(self.player_x, self.player_y))
+
+                # Check collision with all roar stars and their starchilds
+                for star in self.roar_stars:
+                    hitbox = star.get_hitbox()
+                    if hitbox and hitbox.colliderect(heart_rect):
+                        hit_this_frame = True
+
+                    if star.state == 'exploded':
+                        for starchild in star.starchilds:
+                            sc_hitbox = starchild.get_hitbox()
+                            if sc_hitbox and sc_hitbox.colliderect(heart_rect):
+                                hit_this_frame = True
+                # Only end the attack when both reverse flourish and all stars are done
+                if reverse_flourish_done and not self.roar_stars:
+                    self.explosion_time = pygame.time.get_ticks()
+                    self.explosion_time_recorded = True
+                    self.state = 6
+                    self.state6_start_time = pygame.time.get_ticks()
+                # Draw roar animation only if not in reverse flourish
+                if not self.reverse_flourish_started:
+                    frame = ((now_ticks - self.roar_anim_start) // self.roar_anim_speed) % len(self.roar_frames)
+                    roar_img = self.roar_frames[frame]
+                    roar_rect = roar_img.get_rect(center=self.knight_pos)
+                    self.screen.blit(roar_img, roar_rect)
+                if hit_this_frame and not invincible:
+                    self.player_lives = max(0, self.player_lives - 1)
+                    self.invincible_until = pygame.time.get_ticks() + 1000  # 1 second invincibility
+                
                 self.screen.blit(heart_draw_img, (self.player_x, self.player_y))
-                # Draw lives counter
+
+            elif self.state == 6:
+                now = pygame.time.get_ticks()
+                self.screen.fill((0, 0, 0))  # Clear the screen to black
+                front_slash_img = self.front_slash_frames[0]
+                front_slash_rect = front_slash_img.get_rect(center=self.knight_pos)
+                invincible = hasattr(self, 'invincible_until') and pygame.time.get_ticks() < self.invincible_until
+                if invincible:
+                    if ((pygame.time.get_ticks() // 100) % 2) == 0:
+                        heart_draw_img = self.heart_img_0
+                    else:
+                        heart_draw_img = self.heart_img_1
+                else:
+                    heart_draw_img = self.heart_img_0
+
+                time_since_explosion = now - self.explosion_time
+                progress = min(1.0, time_since_explosion / self.slash_duration)
+                print(f"Progress: {progress}")
+
+                # Determine width scaling (only in second half)
+                if progress < 0.5:
+                    scale_x = 1.0
+                else:
+                    shrink_progress = (progress - 0.5) / 0.5
+                    scale_x = 1.0 - 0.7 * shrink_progress
+
+                if progress >= 0.5:
+                    if now - self.front_slash_anim_timer >= self.front_slash_anim_speed:
+                        self.front_slash_frame_idx += 1
+                        self.front_slash_anim_timer = now
+                    if self.front_slash_frame_idx >= (len(self.front_slash_frames) - 1):
+                        self.front_slash_frame_idx = len(self.front_slash_frames) - 2  # hold on last frame (not glow image) for exit sequence
+                        if not self.front_slash_anim_done:
+                            self.front_slash_anim_done = True
+                            self.rise_start_time = now
+                    front_slash_img = self.front_slash_frames[self.front_slash_frame_idx]
+                else:
+                    front_slash_img = self.front_slash_frames[0]  # idle frame
+
+                
+                scaled_width = max(1, int(self.target_width * scale_x))
+                scaled_surf = pygame.transform.smoothscale(self.diagonal_slash_img, (scaled_width, self.target_height))
+                
+                dx = 0.10 * self.screen_width
+                dy = self.screen_height
+                angle = -math.degrees(math.atan2(dy, dx)) + 90
+                rotated_slash = pygame.transform.rotate(scaled_surf, angle)
+
+
+                # Now crop it vertically from the bottom
+                crop_progress = min(1.0, progress / 0.5)  # goes from 0 to 1 in the first half
+                visible_height = int(rotated_slash.get_height() * crop_progress)
+                if visible_height <= 0:
+                    pass
+                cropped_surf = pygame.Surface((rotated_slash.get_width(), visible_height), pygame.SRCALPHA)
+                cropped_surf.blit(rotated_slash, (0, 0), area=pygame.Rect(0, 0, rotated_slash.get_width(), visible_height))
+
+                # Draw
+                target_center_x = 0.5 * self.screen_width
+                target_center_y = self.screen_height // 2
+                rotated_rect = cropped_surf.get_rect(center=(target_center_x, target_center_y))
+
+                if not hasattr(self, 'rise_start_time') and self.front_slash_frame_idx >= len(self.front_slash_frames) - 2:
+                    self.rise_start_time = pygame.time.get_ticks()
+
+
+                self.screen.blit(cropped_surf, rotated_rect.topleft)
+                if progress < 1.0:
+                    self.screen.blit(front_slash_img, front_slash_rect)
+                else:
+                    if not self.front_slash_anim_done:
+                        self.front_slash_anim_done = True
+                        self.rise_start_time = now
+                    if now - self.rise_start_time < 500:
+                        self.screen.blit(front_slash_img, front_slash_rect)
+                    else:
+                        rise_speed = 8  # pixels per frame
+                        self.knight_y -= rise_speed
+
+                        # Add current position to the trail
+                        self.knight_trail.insert(0, self.knight_y)
+                        if len(self.knight_trail) > self.trail_length:
+                            self.knight_trail.pop()
+
+                        # Draw trail (downwards)
+                        for i, trail_y in enumerate(self.knight_trail):
+                            if i < len(self.trail_alphas):
+                                trail_surf = front_slash_img.copy()
+                                trail_surf.set_alpha(self.trail_alphas[i])
+                                trail_rect = trail_surf.get_rect(center=(self.knight_pos[0], trail_y))
+                                self.screen.blit(trail_surf, trail_rect)
+
+                        # Draw the knight (main image)
+                        main_knight_rect = front_slash_img.get_rect(center=(self.knight_pos[0], self.knight_y))
+                        self.screen.blit(front_slash_img, main_knight_rect)
+                        
+                        # Optional: exit when fully offscreen
+                        if self.knight_y + front_slash_img.get_height() < 0:
+                            self.state = 7  # or your next state
+                self.screen.blit(heart_draw_img, (self.player_x, self.player_y))
+            
+            # Draw lives counter
             lives_surf = self.font.render(f"LIVES: {self.player_lives}", True, (255, 255, 255))
             self.screen.blit(lives_surf, (50, 50))
             pygame.display.flip()
@@ -4660,6 +4821,11 @@ class FinalAttackSequence:
         heart_img = self.heart_img_0
         heart_rect = heart_img.get_rect(center=(self.player_x, self.player_y))
         self.screen.blit(heart_img, heart_rect)
+    
+    # helper function for the end of state 6
+    def point_side(px, py, x1, y1, x2, y2):
+        # Returns >0 if point is on one side, <0 if other
+        return (x2 - x1)*(py - y1) - (y2 - y1)*(px - x1)
 
     class Star:
         def __init__(self, img, start_pos, end_pos, curve_offset, star_scale, min_star_scale, duration=1200):
@@ -4797,6 +4963,17 @@ class FinalAttackSequence:
 
             self.state = 'exploded'
 
+        def get_hitbox(self):
+            if self.state in ['moving_out', 'slight_return']:
+                img = pygame.transform.smoothscale(
+                    self.img, (
+                        int(self.img.get_width() * self.scale),
+                        int(self.img.get_height() * self.scale)
+                    )
+                )
+                return img.get_rect(center=(int(self.current_pos[0]), int(self.current_pos[1])))
+            return None  # No hitbox during transform or explosion
+
         class StarChild:
             def __init__(self, img, start_pos, direction, speed=5):
                 self.img = img
@@ -4819,6 +4996,14 @@ class FinalAttackSequence:
                 scaled_img = pygame.transform.scale(self.img, (self.img.get_width() * 2, self.img.get_height() * 2))
                 rect = scaled_img.get_rect(center=(int(self.pos[0]), int(self.pos[1])))
                 screen.blit(scaled_img, rect)
+            
+            def get_hitbox(self):
+                scaled_img = pygame.transform.scale(
+                    self.img,
+                    (self.img.get_width() * 2, self.img.get_height() * 2)
+                )
+                return scaled_img.get_rect(center=(int(self.pos[0]), int(self.pos[1])))
+
             
         def update(self, now):
             if self.state == 'moving_out':
@@ -4934,7 +5119,7 @@ def make_attack_for_debug(attack_name):
     Sets up a minimal environment and loads all required assets.
     """
     pygame.init()
-    screen_width, screen_height = 1280, 720
+    screen_width, screen_height = 1920, 1080
     screen = pygame.display.set_mode((screen_width, screen_height))
     base_dir = os.path.dirname(os.path.abspath(__file__))
     bg_path = os.path.join(base_dir, 'sprites', 'spr_knight_snow_bg.png')
