@@ -1,5 +1,5 @@
 # Quick debug runner for a single attack from game.py
-from game import make_attack_for_debug
+from classes import make_attack_for_debug
 
 # Choose which attack to debug here:
 ATTACK_NAME = 'Final' 
