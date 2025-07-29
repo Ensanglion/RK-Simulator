@@ -621,6 +621,175 @@ class Attack1:
             if self.attack_phase == 'idle' and self.idle_redraw_once:
                 running = False
 
+    def update(self, dt, total_time, keys):
+        now = total_time * 1000  # convert to milliseconds
+        self.time_ms = now
+
+        # Handle player movement
+        if keys[pygame.K_LEFT]:
+            self.player_x -= self.player_speed
+        if keys[pygame.K_RIGHT]:
+            self.player_x += self.player_speed
+        if keys[pygame.K_UP]:
+            self.player_y -= self.player_speed
+        if keys[pygame.K_DOWN]:
+            self.player_y += self.player_speed
+
+        # Clamp player inside battle box
+        playable_rect = self.battle_box_rect.inflate(-2 * self.battle_box_border, -2 * self.battle_box_border)
+        self.player_x = max(playable_rect.left, min(self.player_x, playable_rect.right - self.heart_size))
+        self.player_y = max(playable_rect.top, min(self.player_y, playable_rect.bottom - self.heart_size))
+
+        player_center = (self.player_x + self.heart_size // 2, self.player_y + self.heart_size // 2)
+        hit_this_frame = False
+
+        if self.attack_phase in ('triangle', 'reverse', 'star_reverse'):
+            for bullet in self.star_bullets:
+                if bullet.get('x') is not None and bullet.get('y') is not None:
+                    r = self.star_bullet_img_0.get_width() // 3
+                    dx = bullet['x'] - player_center[0]
+                    dy = bullet['y'] - player_center[1]
+                    if dx * dx + dy * dy < r * r:
+                        hit_this_frame = True
+                        break
+
+        for sc in self.starchilds:
+            if now >= sc['spawn_time']:
+                sc['x'] += sc['vx'] * dt
+                sc['y'] += sc['vy'] * dt
+                rect = pygame.Rect(sc['x'], sc['y'], 1, 1)
+                if rect.collidepoint(player_center):
+                    hit_this_frame = True
+                    break
+
+        if now < self.invincible_until:
+            invincible = True
+        else:
+            invincible = False
+
+        if hit_this_frame and not invincible:
+            self.player_lives = max(0, self.player_lives - 1)
+            self.invincible_until = now + 1000
+
+        # Update animation timers
+        self.fountain_anim_timer += 1
+        if self.fountain_anim_timer >= self.fountain_anim_speed:
+            self.fountain_frame_idx = (self.fountain_frame_idx + 1) % self.fountain_frame_count
+            self.fountain_anim_timer = 0
+
+        self.kris_anim_timer += 1
+        if self.kris_anim_timer >= self.kris_anim_speed:
+            self.kris_frame_idx = (self.kris_frame_idx + 1) % self.kris_frame_count
+            self.kris_anim_timer = 0
+
+        self.susie_anim_timer += 1
+        if self.susie_anim_timer >= self.susie_anim_speed:
+            self.susie_frame_idx = (self.susie_frame_idx + 1) % self.susie_frame_count
+            self.susie_anim_timer = 0
+
+        self.ralsei_anim_timer += 1
+        if self.ralsei_anim_timer >= self.ralsei_anim_speed:
+            self.ralsei_frame_idx = (self.ralsei_frame_idx + 1) % self.ralsei_frame_count
+            self.ralsei_anim_timer = 0
+
+        # Handle attack phase updates
+        self.update_attack_phase(dt, now)
+
+    def draw(self, screen):
+        # Draw background
+        bg_img_scaled = pygame.transform.scale(self.bg_img, (self.screen.get_width(), self.screen.get_height()))
+        screen.blit(bg_img_scaled, (0, 0))
+
+        # Draw Kris
+        kris_img = self.kris_idle_frames[self.kris_frame_idx]
+        self.kris_rect = kris_img.get_rect()
+        self.kris_rect.left = 350
+        self.kris_rect.centery = self.screen_height // 2 - 100
+        screen.blit(kris_img, self.kris_rect)
+
+        # Draw Fountain
+        fountain_img = self.fountain_scaled_frames[self.fountain_frame_idx]
+        fountain_rect = fountain_img.get_rect()
+        fountain_rect.left = self.kris_rect.left + self.kris_rect.width + 100
+        desired_bottom = self.kris_rect.centery - self.kris_rect.height // 2 - 100
+        if fountain_rect.height > desired_bottom:
+            crop_height = desired_bottom
+            cropped_img = pygame.Surface((fountain_rect.width, crop_height), pygame.SRCALPHA)
+            cropped_img.blit(fountain_img, (0, 0), (0, 0, fountain_rect.width, crop_height))
+            fountain_img = cropped_img
+            fountain_rect = fountain_img.get_rect()
+            fountain_rect.left = self.kris_rect.left + self.kris_rect.width + 100
+        screen.blit(fountain_img, fountain_rect)
+
+        # Draw Susie
+        susie_img = self.susie_idle_frames[self.susie_frame_idx]
+        self.susie_rect = susie_img.get_rect()
+        self.susie_rect.left = self.kris_rect.left - 120
+        self.susie_rect.centery = self.kris_rect.centery + 100
+        screen.blit(susie_img, self.susie_rect)
+
+        # Draw Ralsei
+        ralsei_img = self.ralsei_idle_frames[self.ralsei_frame_idx]
+        self.ralsei_rect = ralsei_img.get_rect()
+        self.ralsei_rect.left = self.susie_rect.left - 10
+        self.ralsei_rect.centery = self.susie_rect.centery + 100
+        screen.blit(ralsei_img, self.ralsei_rect)
+
+        # Battle box
+        pygame.draw.rect(screen, self.battle_box_color, self.battle_box_rect)
+        pygame.draw.rect(screen, self.battle_box_border_color, self.battle_box_rect, self.battle_box_border)
+
+        # Lives counter
+        lives_surf = self.font.render(f"LIVES: {self.player_lives}", True, (255, 255, 255))
+        screen.blit(lives_surf, (50, 50))
+
+        # Player heart
+        invincible = self.time_ms < self.invincible_until
+        if invincible:
+            heart_draw_img = self.heart_img_0 if ((self.time_ms // 100) % 2) == 0 else self.heart_img_1
+        else:
+            heart_draw_img = self.heart_img_0
+        screen.blit(heart_draw_img, (self.player_x, self.player_y))
+
+        # Attack-specific drawing (bullets, Knight, trails, etc.)
+        self.draw_attack_phase(screen)
+
+    def update_attack_phase(self, now, keys):
+        if self.attack_phase == 'intro':
+            if now - self.attack_start_time > 2500:
+                self.attack_phase = 'attacking'
+                self.bullets = []
+                self.attack_start_time = now
+
+        elif self.attack_phase == 'attacking':
+            for bullet in self.bullets:
+                bullet.update()
+            self.bullets = [b for b in self.bullets if not b.dead]
+
+            self.player.update(keys)
+
+            # Temporary: switch to idle after 10 seconds
+            if now - self.attack_start_time > 10000:
+                self.attack_phase = 'idle'
+                self.idle_redraw_once = False
+
+        elif self.attack_phase == 'idle':
+            self.player.update(keys)
+            self.idle_redraw_once = True
+
+    def draw_attack_phase(self, screen):
+        if self.attack_phase == 'intro':
+            screen.blit(self.knight_intro_frame, self.knight_intro_rect)
+
+        elif self.attack_phase == 'attacking':
+            for bullet in self.bullets:
+                bullet.draw(screen)
+            self.player.draw(screen)
+
+        elif self.attack_phase == 'idle':
+            self.player.draw(screen)
+
+
 class Attack2:
     def __init__(self, screen, bg_img, fountain_scaled_frames, fountain_frame_idx,
     kris_idle_frames, kris_frame_idx, kris_rect,
@@ -1917,6 +2086,7 @@ class Attack5:
         self.trail_alphas = [255 // (i + 2) for i in range(self.trail_length)]
         self.knight_trail = []
 
+        self.rotated_slash = None
 
     def load_assets(self):
         # Load knight attack animation frames
@@ -2085,14 +2255,14 @@ class Attack5:
         scaled_width = int(self.battle_box_rect.width * scale_factor)
         scaled_height = int(self.battle_box_rect.height * scale_factor)
         scaled_slash = pygame.transform.smoothscale(slash_img, (scaled_width, scaled_height))
-        rotated_slash = pygame.transform.rotate(scaled_slash, self.slash_angle)
+        self.rotated_slash = pygame.transform.rotate(scaled_slash, self.slash_angle)
         
         # Get player position
         player_rect = pygame.Rect(self.player_x, self.player_y, self.heart_size, self.heart_size)
         player_center = (self.player_x + self.heart_size // 2, self.player_y + self.heart_size // 2)
         
         # Calculate where the rotated slash is positioned (same as in draw method)
-        slash_rect = rotated_slash.get_rect()
+        slash_rect = self.rotated_slash.get_rect()
         slash_rect.center = self.slash_position
         
         # Check if player rectangle overlaps with the slash rectangle
@@ -2112,10 +2282,10 @@ class Attack5:
                 rel_x = px - slash_rect.left
                 rel_y = py - slash_rect.top
                 
-                if (0 <= rel_x < rotated_slash.get_width() and 
-                    0 <= rel_y < rotated_slash.get_height()):
+                if (0 <= rel_x < self.rotated_slash.get_width() and 
+                    0 <= rel_y < self.rotated_slash.get_height()):
                     try:
-                        pixel_alpha = rotated_slash.get_at((int(rel_x), int(rel_y)))[3]
+                        pixel_alpha = self.rotated_slash.get_at((int(rel_x), int(rel_y)))[3]
                         if pixel_alpha > 100:  # Only hit if pixel has significant alpha (actual slash line)
                             hit_detected = True
                             break
